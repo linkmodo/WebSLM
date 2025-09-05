@@ -1,0 +1,220 @@
+// app.js — WebLLM primary runtime with WebGPU, WASM fallback via wllama
+
+// CDN ESM endpoints (pin versions for stability)
+const WEBLLM_URL = "https://esm.sh/@mlc-ai/web-llm@0.2.79";
+const WLLAMA_URL = "https://esm.sh/@wllama/wllama@2.3.5/esm/wasm-from-cdn.js"; // used inside fallback
+
+const els = {
+  messages: document.getElementById("messages"),
+  prompt: document.getElementById("prompt"),
+  send: document.getElementById("send"),
+  form: document.getElementById("chat-form"),
+  toolBtn: document.getElementById("btn-tool-demo"),
+  initLabel: document.getElementById("init-label"),
+  runtimeBadge: document.getElementById("runtime-badge"),
+  settingsDlg: document.getElementById("settings"),
+  settingsBtn: document.getElementById("btn-settings"),
+  closeSettingsBtn: document.getElementById("btn-close-settings"),
+  modelSelect: document.getElementById("model-select"),
+  reloadModelBtn: document.getElementById("btn-reload-model"),
+  clearBtn: document.getElementById("btn-clear"),
+};
+
+let engine = null;
+let runtime = "detecting"; // "webgpu" | "wasm"
+let messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
+let currentModel = els.modelSelect.value;
+
+// --- UI helpers ---
+function addMsg(who, text) {
+  const row = document.createElement("div");
+  row.className = "msg " + (who === "assistant" ? "assistant" : "user");
+  const whoEl = document.createElement("div");
+  whoEl.className = "who";
+  whoEl.textContent = who;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text;
+  row.append(whoEl, bubble);
+  els.messages.append(row);
+  els.messages.scrollTop = els.messages.scrollHeight;
+  return bubble;
+}
+function setBadge(txt, ok = true) {
+  els.runtimeBadge.textContent = txt;
+  els.runtimeBadge.style.background = ok ? "#064e3b" : "#3f1d1d";
+  els.runtimeBadge.style.border = "1px solid " + (ok ? "#065f46" : "#5b2323");
+}
+
+// --- Function-calling demo schema ---
+const tools = [{
+  type: "function",
+  function: {
+    name: "getTime",
+    description: "Get the current local time as an ISO string.",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+  },
+}];
+
+function toolRouter(name, _args) {
+  if (name === "getTime") {
+    return { now: new Date().toISOString() };
+  }
+  return { error: "Unknown tool" };
+}
+
+// --- Runtime detection + init ---
+async function init() {
+  // Try WebGPU first
+  if (navigator.gpu) {
+    try {
+      const webllm = await import(WEBLLM_URL);
+      setBadge("WebGPU (WebLLM) — initializing…");
+      els.initLabel.textContent = "Loading model (first run downloads weights)…";
+
+      // Create engine with progress
+      const engineConfig = {
+        initProgressCallback: (r) => (els.initLabel.textContent = r.text || "Loading…"),
+        appConfig: webllm.prebuiltAppConfig, // use prebuilt list
+      };
+      engine = await webllm.CreateMLCEngine(currentModel, engineConfig);
+      runtime = "webgpu";
+      setBadge("WebGPU (WebLLM)");
+      els.initLabel.textContent = "Ready.";
+      return;
+    } catch (err) {
+      console.warn("WebGPU path failed, falling back to WASM:", err);
+    }
+  }
+
+  // Fallback to WASM (wllama)
+  runtime = "wasm";
+  setBadge("WASM (wllama) — initializing…", true);
+  els.initLabel.textContent = "Loading tiny GGUF (first run downloads)…";
+  const { default: WasmFromCDN } = await import(WLLAMA_URL);
+  const { startWasmFallback } = await import("./fallback/wllama.js");
+  engine = await startWasmFallback({ WasmFromCDN });
+  setBadge("WASM (wllama)");
+  els.initLabel.textContent = "Ready (fallback).";
+}
+
+async function reloadModel() {
+  if (runtime !== "webgpu") return alert("Model reload only applies to WebLLM path.");
+  els.initLabel.textContent = "Reloading model…";
+  const webllm = await import(WEBLLM_URL);
+  const cfg = { initProgressCallback: (r) => (els.initLabel.textContent = r.text || "Loading…") };
+  engine = await webllm.CreateMLCEngine(currentModel, cfg);
+  els.initLabel.textContent = "Ready.";
+}
+
+// --- Chat send ---
+async function handleSend(prompt) {
+  if (!engine) return;
+  addMsg("user", prompt);
+  let bubble = addMsg("assistant", "…");
+  if (runtime === "webgpu") {
+    const webllm = await import(WEBLLM_URL);
+    messages.push({ role: "user", content: prompt });
+    try {
+      const chunks = await engine.chat.completions.create({
+        messages,
+        stream: true,
+        stream_options: { include_usage: true },
+        temperature: Number(document.getElementById("temperature").value || 0.7),
+        seed: Number(document.getElementById("seed").value || 0),
+      });
+      let acc = "";
+      for await (const ch of chunks) {
+        const delta = ch.choices?.[0]?.delta?.content || "";
+        acc += delta;
+        bubble.textContent = acc;
+      }
+      messages.push({ role: "assistant", content: acc });
+    } catch (e) {
+      bubble.textContent = "Error: " + e.message;
+      console.error(e);
+    }
+  } else {
+    try {
+      const out = await engine.complete(prompt, { nPredict: 128, temp: 0.7 });
+      bubble.textContent = out;
+      messages.push({ role: "assistant", content: out });
+    } catch (e) {
+      bubble.textContent = "Error: " + e.message;
+    }
+  }
+}
+
+
+els.form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = els.prompt.value.trim();
+  if (!text) return;
+  els.prompt.value = "";
+  handleSend(text);
+});
+
+els.toolBtn.addEventListener("click", () => { runToolDemo(); return; /* below is legacy */
+
+  
+});
+
+els.settingsBtn.addEventListener("click", () => els.settingsDlg.showModal());
+els.closeSettingsBtn?.addEventListener("click", () => els.settingsDlg.close());
+
+els.reloadModelBtn.addEventListener("click", async (e) => {
+  e.preventDefault();
+  currentModel = els.modelSelect.value;
+  await reloadModel();
+});
+
+els.clearBtn.addEventListener("click", () => {
+  messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
+  els.messages.innerHTML = "";
+});
+
+// Kick off init
+init();
+
+
+async function runToolDemo() {
+  if (!engine) return;
+  const q = "What time is it now? If you can, call getTime().";
+  addMsg("user", q);
+  let bubble = addMsg("assistant", "…");
+
+  if (runtime !== "webgpu") {
+    bubble.textContent = "Tool-calling demo requires WebLLM path.";
+    return;
+  }
+  const webllm = await import(WEBLLM_URL);
+  messages.push({ role: "user", content: q });
+  try {
+    const reply = await engine.chat.completions.create({
+      messages,
+      tools,
+      tool_choice: "auto",
+      temperature: 0.0,
+      seed: Number(document.getElementById("seed").value || 0),
+    });
+    const msg = reply.choices?.[0]?.message;
+    if (msg && msg.tool_calls && msg.tool_calls.length > 0) {
+      const call = msg.tool_calls[0];
+      const toolRes = toolRouter(call.function.name, call.function.arguments ? JSON.parse(call.function.arguments) : {});
+      messages.push({ role: "tool", content: JSON.stringify(toolRes), tool_call_id: call.id || "tool-1" });
+      const final = await engine.chat.completions.create({ messages });
+      const finalText = final.choices?.[0]?.message?.content || "(no content)";
+      bubble.textContent = finalText;
+      messages.push({ role: "assistant", content: finalText });
+    } else {
+      bubble.textContent = msg?.content || "(no tool call; model replied directly)";
+      messages.push({ role: "assistant", content: msg?.content || "" });
+    }
+  } catch (e) {
+    bubble.textContent = "Error: " + e.message;
+  }
+}
+

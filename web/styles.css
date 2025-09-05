@@ -1,0 +1,27 @@
+*{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#0b1220;color:#e5e7eb}
+.app{max-width:920px;margin:0 auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.title{display:flex;gap:10px;align-items:center}
+.title .dot{width:10px;height:10px;border-radius:50%;background:#22c55e;box-shadow:0 0 12px #22c55e}
+h1{font-size:18px;margin:0;color:#e2e8f0}
+.actions button{background:#111827;color:#e5e7eb;border:1px solid #1f2937;padding:6px 10px;border-radius:8px;cursor:pointer}
+.actions button:hover{background:#0f172a}
+.status{font-size:12px;opacity:.9;margin:6px 0;display:flex;gap:8px;align-items:center;color:#a5b4fc}
+.badge{background:#1f2937;border:1px solid #374151;padding:2px 6px;border-radius:999px}
+.chat{background:#0f172a;border:1px solid #1f2937;border-radius:14px;padding:12px;box-shadow:0 10px 20px rgba(0,0,0,.25)}
+.messages{height:60vh;overflow:auto;border-radius:10px;padding:10px;background:#0b1220;border:1px solid #111827}
+.msg{display:flex;gap:10px;margin:8px 0}
+.msg .who{width:64px;opacity:.7;font-size:12px;text-align:right;color:#9ca3af}
+.msg .bubble{flex:1;background:#0b1220;border:1px solid #1f2937;padding:10px;border-radius:12px;white-space:pre-wrap;word-wrap:break-word}
+.msg.assistant .bubble{background:#0b1325}
+.input-row{display:flex;gap:8px;margin-top:10px}
+.input-row input{flex:1;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
+.input-row button{padding:10px 14px;border-radius:10px;border:1px solid #334155;background:#1f2937;color:#e5e7eb;cursor:pointer}
+.input-row button:hover{background:#111827}
+.toolrow{margin-top:6px;display:flex;gap:8px}
+dialog{border:none;border-radius:12px;padding:0;overflow:hidden}
+.settings{padding:16px;background:#0f172a;color:#e5e7eb;display:flex;flex-direction:column;gap:10px;min-width:320px}
+.settings h3{margin:0 0 8px 0}
+.settings label{display:flex;flex-direction:column;gap:6px}
+.settings input,.settings select{padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
+.settings .row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
