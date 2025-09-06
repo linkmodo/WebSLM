@@ -1,8 +1,10 @@
 // app.js — WebLLM primary runtime with WebGPU, WASM fallback via wllama
 
 // CDN ESM endpoints (pin versions for stability)
-const WEBLLM_URL = "https://esm.sh/@mlc-ai/web-llm@0.2.79";
-const WLLAMA_URL = "https://esm.sh/@wllama/wllama@2.3.5/esm/wasm-from-cdn.js"; // used inside fallback
+const WEBLLM_URL = "https://unpkg.com/@mlc-ai/web-llm@0.2.79?module";
+const WLLAMA_URL = "https://unpkg.com/@wllama/wllama@2.3.5/esm/wasm-from-cdn.js?module";
+
+
 
 const els = {
   messages: document.getElementById("messages"),
@@ -72,14 +74,32 @@ async function init() {
   if (navigator.gpu) {
     try {
       const webllm = await import(WEBLLM_URL);
+
+      // Dynamically populate the model dropdown from WebLLM's prebuilt list
+      try {
+        const list = webllm.prebuiltAppConfig?.model_list || [];
+        if (Array.isArray(list) && list.length) {
+          els.modelSelect.innerHTML = "";
+          for (const m of list) {
+            const opt = document.createElement("option");
+            opt.value = m.model_id;          // <-- guaranteed valid ID
+            opt.textContent = m.model_id;
+            els.modelSelect.appendChild(opt);
+          }
+          currentModel = els.modelSelect.value;
+        }
+      } catch (e) {
+        console.warn("Could not populate model list:", e);
+      }
+
       setBadge("WebGPU (WebLLM) — initializing…");
       els.initLabel.textContent = "Loading model (first run downloads weights)…";
 
-      // Create engine with progress
       const engineConfig = {
         initProgressCallback: (r) => (els.initLabel.textContent = r.text || "Loading…"),
-        appConfig: webllm.prebuiltAppConfig, // use prebuilt list
+        appConfig: webllm.prebuiltAppConfig, // use the prebuilt model list
       };
+
       engine = await webllm.CreateMLCEngine(currentModel, engineConfig);
       runtime = "webgpu";
       setBadge("WebGPU (WebLLM)");
@@ -91,15 +111,24 @@ async function init() {
   }
 
   // Fallback to WASM (wllama)
+  // Fallback to WASM (wllama)
   runtime = "wasm";
   setBadge("WASM (wllama) — initializing…", true);
   els.initLabel.textContent = "Loading tiny GGUF (first run downloads)…";
-  const { default: WasmFromCDN } = await import(WLLAMA_URL);
-  const { startWasmFallback } = await import("./fallback/wllama.js");
-  engine = await startWasmFallback({ WasmFromCDN });
+
+  // Import the CDN helper; it can be a function (returning assets) OR a ready assets object.
+// inside init(), WASM fallback block in app.js
+const { default: WasmFromCDN } = await import(WLLAMA_URL);
+const assets = (typeof WasmFromCDN === "function") ? WasmFromCDN() : WasmFromCDN;
+
+const { startWasmFallback } = await import("./fallback/wllama.js");
+engine = await startWasmFallback({ WasmFromCDN: assets });
+
+
   setBadge("WASM (wllama)");
   els.initLabel.textContent = "Ready (fallback).";
 }
+
 
 async function reloadModel() {
   if (runtime !== "webgpu") return alert("Model reload only applies to WebLLM path.");
@@ -137,15 +166,18 @@ async function handleSend(prompt) {
       bubble.textContent = "Error: " + e.message;
       console.error(e);
     }
-  } else {
-    try {
-      const out = await engine.complete(prompt, { nPredict: 128, temp: 0.7 });
-      bubble.textContent = out;
-      messages.push({ role: "assistant", content: out });
-    } catch (e) {
-      bubble.textContent = "Error: " + e.message;
-    }
+} else {
+  try {
+    bubble.textContent = "Thinking (WASM)…";
+    const out = await engine.complete(prompt, { nPredict: 128, temp: 0.7 });
+    bubble.textContent = out || "(no output)";
+    messages.push({ role: "assistant", content: out || "" });
+  } catch (e) {
+    bubble.textContent = "Error: " + e.message;
+    console.error(e);
   }
+}
+
 }
 
 
