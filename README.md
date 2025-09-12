@@ -54,6 +54,26 @@ npx http-server web -p 8000
 - WebGPU: Chrome/Edge stable; Safari improving; Firefox partial (behind flags).
 - WASM fallback works on most modern browsers.
 
+## Deployment
+
+### Deploy to Netlify
+
+#### Method 1: Deploy from GitHub (Recommended)
+1. Push your code to GitHub (e.g., `https://github.com/fenago/DrleeWebSLM`) - obviously use your own repo
+2. Log into Netlify (https://app.netlify.com)
+3. Click **"Add new site"** → **"Import an existing project"**
+4. Connect to GitHub and select your repository (`fenago/DrleeWebSLM`)
+5. Configure build settings:
+   - **Base directory**: Leave blank
+   - **Build command**: Leave blank (no build needed)
+   - **Publish directory**: `web`
+6. Click **"Deploy site"**
+
+#### Method 2: Drag and Drop
+1. Open Netlify Drop (https://app.netlify.com/drop)
+2. Drag the entire `web` folder directly onto the page
+3. Site deploys instantly
+
 ## Notes
 - Default **WebLLM** models come from MLC’s prebuilt list and will stream from CDN/HF on first load.
 - Service worker caches **static assets** and tries to cache **model shards** so subsequent loads are faster.
@@ -99,3 +119,4 @@ npx http-server web -p 8000
 ## Credits
 - WebLLM by the MLC team
 - wllama by @ngxson (WASM binding for llama.cpp)
+- Dr. Ernesto Lee / LVNG.ai
