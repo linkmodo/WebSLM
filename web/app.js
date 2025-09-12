@@ -44,8 +44,9 @@ function addMsg(who, text) {
 }
 function setBadge(txt, ok = true) {
   els.runtimeBadge.textContent = txt;
-  els.runtimeBadge.style.background = ok ? "#064e3b" : "#3f1d1d";
-  els.runtimeBadge.style.border = "1px solid " + (ok ? "#065f46" : "#5b2323");
+  els.runtimeBadge.style.background = ok ? "#dcfce7" : "#fee2e2";
+  els.runtimeBadge.style.border = "1px solid " + (ok ? "#bbf7d0" : "#fecaca");
+  els.runtimeBadge.style.color = ok ? "#14532d" : "#7f1d1d";
 }
 
 // --- Function-calling demo schema ---
