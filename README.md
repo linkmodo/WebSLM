@@ -1,7 +1,7 @@
-# DrLee GPT - Small Language Model (Web Edition)
+# Crazy Bananas SLM - Small Language Model (Web Edition)
 
 <div align="center">
-  <img src="./public/drlee-ai-logo.png" alt="DrLee AI Logo" width="200">
+  <img src="./public/logo.png" alt="Crazy Bananas SLM Logo" width="200">
 </div>
 
 Run an LLM **entirely in the browser**. Primary path uses **WebLLM + WebGPU**. If WebGPU isn't available, we **fallback to WASM** via **wllama** (no server, no keys).
