@@ -1,7 +1,7 @@
 # Crazy Bananas SLM - Small Language Model (Web Edition)
 
 <div align="center">
-  <img src="./public/logo.png" alt="Crazy Bananas SLM Logo" width="200">
+  <img src="./web/public/logo.png" alt="Crazy Bananas SLM Logo" width="200">
 </div>
 
 Run an LLM **entirely in the browser**. Primary path uses **WebLLM + WebGPU**. If WebGPU isn't available, we **fallback to WASM** via **wllama** (no server, no keys).
@@ -119,4 +119,5 @@ npx http-server web -p 8000
 ## Credits
 - WebLLM by the MLC team
 - wllama by @ngxson (WASM binding for llama.cpp)
-- Dr. Ernesto Lee / LVNG.ai
+- Original Script by Dr. Ernesto Lee / LVNG.ai
+- Updated by Linkmodo
