@@ -290,22 +290,31 @@ window.removeFile = function(index) {
 }
 
 async function handleFileUpload(files) {
-  const MAX_FILES = 10; // Limit number of files to prevent memory issues
+  const MAX_FILES = 5; // Reduced to prevent token overflow
   const totalFiles = uploadedFiles.length + files.length;
   
   if (totalFiles > MAX_FILES) {
-    addMsg("assistant", `Too many files. Maximum ${MAX_FILES} files allowed. Currently have ${uploadedFiles.length} files.`);
+    addMsg("assistant", `Too many files. Maximum ${MAX_FILES} files allowed to prevent context window overflow. Currently have ${uploadedFiles.length} files.`);
     return;
   }
   
-  // Calculate total size to prevent memory overload
+  // More conservative size limits to prevent token overflow
   let totalSize = uploadedFiles.reduce((sum, file) => sum + file.size, 0);
   const newFilesSize = Array.from(files).reduce((sum, file) => sum + file.size, 0);
-  const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB total limit
+  const MAX_TOTAL_SIZE = 20 * 1024 * 1024; // Reduced to 20MB total limit
+  const MAX_SINGLE_FILE = 5 * 1024 * 1024; // 5MB per file limit
   
   if (totalSize + newFilesSize > MAX_TOTAL_SIZE) {
-    addMsg("assistant", `Total file size too large. Maximum total size is ${formatFileSize(MAX_TOTAL_SIZE)}. Current total: ${formatFileSize(totalSize)}, trying to add: ${formatFileSize(newFilesSize)}.`);
+    addMsg("assistant", `Total file size too large. Maximum total size is ${formatFileSize(MAX_TOTAL_SIZE)} to prevent context window overflow. Current total: ${formatFileSize(totalSize)}, trying to add: ${formatFileSize(newFilesSize)}.`);
     return;
+  }
+  
+  // Check individual file sizes
+  for (const file of files) {
+    if (file.size > MAX_SINGLE_FILE) {
+      addMsg("assistant", `File "${file.name}" is too large (${formatFileSize(file.size)}). Maximum file size is ${formatFileSize(MAX_SINGLE_FILE)} to prevent context window overflow.`);
+      return;
+    }
   }
   
   for (const file of files) {
@@ -575,6 +584,26 @@ async function reloadModel() {
   els.initLabel.textContent = "Ready.";
 }
 
+// Simple token estimation function (rough approximation)
+function estimateTokens(text) {
+  // Rough estimation: 1 token ≈ 4 characters for English text
+  // This is a conservative estimate to stay well under limits
+  return Math.ceil(text.length / 3.5);
+}
+
+// Truncate text to fit within token limits
+function truncateToTokenLimit(text, maxTokens) {
+  const estimatedTokens = estimateTokens(text);
+  if (estimatedTokens <= maxTokens) {
+    return text;
+  }
+  
+  // Calculate approximate character limit
+  const maxChars = Math.floor(maxTokens * 3.5);
+  const truncated = text.substring(0, maxChars);
+  return truncated + `\n\n[Content truncated to fit context window - showing ~${maxTokens} tokens of ~${estimatedTokens} total tokens]`;
+}
+
 // --- Chat send ---
 async function handleSend(prompt) {
   if (!engine) return;
@@ -585,33 +614,67 @@ async function handleSend(prompt) {
     try {
       const fileContents = uploadedFiles.map(file => {
         if (file.type === 'text') {
-          // Limit text content length to prevent memory issues
-          const maxTextLength = 50000; // 50KB of text per file
-          let content = file.content;
-          if (content.length > maxTextLength) {
-            content = content.substring(0, maxTextLength) + `\n[Content truncated - showing first ${maxTextLength} characters of ${content.length}]`;
-          }
+          // Much more conservative limit for text files - max 1000 tokens per file
+          const maxTokensPerFile = 1000;
+          let content = truncateToTokenLimit(file.content, maxTokensPerFile);
           return `\n\n--- File: ${file.name} ---\n${content}\n--- End of ${file.name} ---`;
         } else if (file.type === 'image') {
           return `\n\n--- Image: ${file.name} (${formatFileSize(file.size)}) ---\n[Image content available for analysis]\n--- End of ${file.name} ---`;
         } else if (file.type === 'pdf') {
-          return `\n\n--- PDF: ${file.name} (${formatFileSize(file.size)}) ---\n${file.content}\n--- End of ${file.name} ---`;
+          // Limit PDF content to 800 tokens
+          const maxTokensPerPdf = 800;
+          let content = truncateToTokenLimit(file.content, maxTokensPerPdf);
+          return `\n\n--- PDF: ${file.name} (${formatFileSize(file.size)}) ---\n${content}\n--- End of ${file.name} ---`;
         }
         return `\n\n--- File: ${file.name} (${formatFileSize(file.size)}) ---\n[File content available]\n--- End of ${file.name} ---`;
       }).join('');
       
-      // Check if the combined prompt is too large
-      const maxPromptLength = 200000; // 200KB total prompt limit
-      if ((prompt + fileContents).length > maxPromptLength) {
-        addMsg("assistant", `❌ Combined message too large (${formatFileSize((prompt + fileContents).length)}). Please reduce file content or number of files. Maximum size: ${formatFileSize(maxPromptLength)}.`);
-        return;
-      }
-      
       fullPrompt = prompt + fileContents;
       
-      // Show user message with file indicator
+      // Estimate total tokens including conversation history
+      let totalHistoryTokens = 0;
+      messages.forEach(msg => {
+        totalHistoryTokens += estimateTokens(msg.content);
+      });
+      
+      const currentPromptTokens = estimateTokens(fullPrompt);
+      const totalTokens = totalHistoryTokens + currentPromptTokens;
+      
+      // Conservative limit - leave room for response
+      const maxContextTokens = 3000; // Well under 4096 limit
+      
+      if (totalTokens > maxContextTokens) {
+        // Try to reduce conversation history first
+        while (messages.length > 1 && totalHistoryTokens + currentPromptTokens > maxContextTokens) {
+          // Remove oldest messages (keep system message)
+          if (messages.length > 1 && messages[1].role !== 'system') {
+            const removed = messages.splice(1, 1)[0];
+            totalHistoryTokens -= estimateTokens(removed.content);
+          } else {
+            break;
+          }
+        }
+        
+        // If still too large, truncate the current prompt
+        if (totalHistoryTokens + currentPromptTokens > maxContextTokens) {
+          const availableTokens = maxContextTokens - totalHistoryTokens - 100; // Leave buffer
+          if (availableTokens < 500) {
+            addMsg("assistant", `❌ Context window full. Please start a new conversation or reduce file content. Current: ~${totalTokens} tokens, Limit: ${maxContextTokens} tokens.`);
+            return;
+          }
+          fullPrompt = truncateToTokenLimit(fullPrompt, availableTokens);
+        }
+      }
+      
+      // Show user message with file indicator and token info
       const fileIndicator = uploadedFiles.length > 0 ? ` 📎 (${uploadedFiles.length} file${uploadedFiles.length > 1 ? 's' : ''})` : '';
-      addMsg("user", prompt + fileIndicator);
+      const tokenInfo = totalTokens > 2000 ? ` [~${totalTokens} tokens]` : '';
+      addMsg("user", prompt + fileIndicator + tokenInfo);
+      
+      // Show truncation warning if content was truncated
+      if (fullPrompt.includes('[Content truncated to fit context window')) {
+        addMsg("assistant", "ℹ️ **Note:** Some file content was truncated to fit within the model's context window. For full analysis of large files, consider breaking them into smaller sections.");
+      }
       
       // Clear uploaded files after sending and force cleanup
       uploadedFiles = [];
