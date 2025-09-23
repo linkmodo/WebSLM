@@ -9,6 +9,7 @@ const els = {
   messages: document.getElementById("messages"),
   prompt: document.getElementById("prompt"),
   send: document.getElementById("send"),
+  stopBtn: document.getElementById("stop-btn"),
   form: document.getElementById("chat-form"),
   fileInput: document.getElementById("file-input"),
   fileBtn: document.getElementById("file-btn"),
@@ -28,6 +29,8 @@ let runtime = "detecting"; // "webgpu" | "wasm"
 let messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
 let currentModel = els.modelSelect.value || "";
 let uploadedFiles = [];
+let isGenerating = false;
+let currentAbortController = null;
 
 // --- UI helpers ---
 function addMsg(who, text) {
@@ -38,11 +41,54 @@ function addMsg(who, text) {
   whoEl.textContent = who;
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-  bubble.textContent = text;
+  
+  // Format text with basic markdown support for assistant messages
+  if (who === "assistant") {
+    bubble.innerHTML = formatMarkdown(text);
+  } else {
+    bubble.textContent = text;
+  }
+  
   row.append(whoEl, bubble);
   els.messages.append(row);
   els.messages.scrollTop = els.messages.scrollHeight;
   return bubble;
+}
+
+function formatMarkdown(text) {
+  // Basic markdown formatting
+  let formatted = text
+    // Code blocks
+    .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Bold
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    // Italic
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    // Headers
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // Lists
+    .replace(/^\* (.+)$/gm, '<li>$1</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    // Line breaks
+    .replace(/\n/g, '<br>');
+  
+  // Wrap consecutive list items in ul tags
+  formatted = formatted.replace(/(<li>.*<\/li>)(<br>)*(<li>.*<\/li>)/g, '<ul>$1$3</ul>');
+  formatted = formatted.replace(/(<\/li>)<br>(<li>)/g, '$1$2');
+  
+  return formatted;
+}
+
+function setGeneratingState(generating) {
+  isGenerating = generating;
+  els.send.style.display = generating ? 'none' : 'inline-block';
+  els.stopBtn.style.display = generating ? 'inline-block' : 'none';
+  els.prompt.disabled = generating;
+  els.fileBtn.disabled = generating;
 }
 function setBadge(txt, ok = true) {
   els.runtimeBadge.textContent = txt;
@@ -509,6 +555,11 @@ async function handleSend(prompt) {
   }
   
   let bubble = addMsg("assistant", "…");
+  setGeneratingState(true);
+  
+  // Create abort controller for interruption
+  currentAbortController = new AbortController();
+  
   if (runtime === "webgpu") {
     const webllm = await import(WEBLLM_URL);
     messages.push({ role: "user", content: fullPrompt });
@@ -520,28 +571,63 @@ async function handleSend(prompt) {
         temperature: Number(document.getElementById("temperature").value || 0.7),
         seed: Number(document.getElementById("seed").value || 0),
       });
+      
       let acc = "";
+      let isInterrupted = false;
+      
       for await (const ch of chunks) {
+        // Check if generation was interrupted
+        if (currentAbortController.signal.aborted) {
+          isInterrupted = true;
+          break;
+        }
+        
         const delta = ch.choices?.[0]?.delta?.content || "";
         acc += delta;
-        bubble.textContent = acc;
+        
+        // Update with formatted markdown in real-time
+        bubble.innerHTML = formatMarkdown(acc);
+        
+        // Scroll to bottom as content updates
+        els.messages.scrollTop = els.messages.scrollHeight;
       }
+      
+      if (isInterrupted) {
+        acc += "\n\n[Generation stopped by user]";
+        bubble.innerHTML = formatMarkdown(acc);
+      }
+      
       messages.push({ role: "assistant", content: acc });
     } catch (e) {
-      bubble.textContent = "Error: " + e.message;
-      console.error(e);
+      if (e.name === 'AbortError' || currentAbortController.signal.aborted) {
+        bubble.innerHTML = formatMarkdown(bubble.textContent + "\n\n[Generation stopped by user]");
+      } else {
+        bubble.innerHTML = formatMarkdown("Error: " + e.message);
+        console.error(e);
+      }
     }
 } else {
   try {
-    bubble.textContent = "Thinking (WASM)…";
+    bubble.innerHTML = formatMarkdown("Thinking (WASM)…");
+    
+    // For WASM, we can't easily interrupt, but we can at least show the state
     const out = await engine.complete(fullPrompt, { nPredict: 128, temp: 0.7 });
-    bubble.textContent = out || "(no output)";
+    
+    if (currentAbortController.signal.aborted) {
+      bubble.innerHTML = formatMarkdown((out || "") + "\n\n[Generation stopped by user]");
+    } else {
+      bubble.innerHTML = formatMarkdown(out || "(no output)");
+    }
+    
     messages.push({ role: "assistant", content: out || "" });
   } catch (e) {
-    bubble.textContent = "Error: " + e.message;
+    bubble.innerHTML = formatMarkdown("Error: " + e.message);
     console.error(e);
   }
 }
+
+setGeneratingState(false);
+currentAbortController = null;
 
 }
 
@@ -591,6 +677,14 @@ els.reloadModelBtn.addEventListener("click", async (e) => {
 els.clearBtn.addEventListener("click", () => {
   messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
   els.messages.innerHTML = "";
+});
+
+// Stop button event listener
+els.stopBtn.addEventListener("click", () => {
+  if (currentAbortController && isGenerating) {
+    currentAbortController.abort();
+    setGeneratingState(false);
+  }
 });
 
 // Enable/disable chat interface based on model selection
