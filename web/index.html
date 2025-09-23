@@ -35,13 +35,11 @@
       <div id="messages" class="messages"></div>
       <form id="chat-form" class="input-row">
         <input id="prompt" type="text" placeholder="Ask anything (runs locally)..." autocomplete="off" />
+        <input id="file-input" type="file" accept=".txt,.md,.json,.csv,.xml,.html,.js,.py,.cpp,.c,.java,.ts,.jsx,.tsx,.vue,.php,.rb,.go,.rs,.sh,.yml,.yaml,.toml,.ini,.cfg,.log,.pdf,.docx,.doc,.rtf,.odt,.png,.jpg,.jpeg,.gif,.bmp,.webp,.svg" multiple style="display: none;" />
+        <button id="file-btn" type="button" title="Upload files">📎</button>
         <button id="send" type="submit">Send ▸</button>
       </form>
-      <div class="toolrow">
-        <button class="demo-btn" data-demo="time">🕒 Get Current Time</button>
-        <button class="demo-btn" data-demo="math">🧮 Calculate Expression</button>
-        <button class="demo-btn" data-demo="weather">☁️ Get Weather</button>
-      </div>
+      <div id="file-preview" class="file-preview" style="display: none;"></div>
     </main>
 
     <dialog id="settings">

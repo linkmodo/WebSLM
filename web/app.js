@@ -5,13 +5,14 @@ const WEBLLM_URL = "https://unpkg.com/@mlc-ai/web-llm@0.2.79?module";
 const WLLAMA_URL = "https://unpkg.com/@wllama/wllama@2.3.5/esm/wasm-from-cdn.js?module";
 
 
-
 const els = {
   messages: document.getElementById("messages"),
   prompt: document.getElementById("prompt"),
   send: document.getElementById("send"),
   form: document.getElementById("chat-form"),
-  toolBtn: document.getElementById("btn-tool-demo"),
+  fileInput: document.getElementById("file-input"),
+  fileBtn: document.getElementById("file-btn"),
+  filePreview: document.getElementById("file-preview"),
   initLabel: document.getElementById("init-label"),
   runtimeBadge: document.getElementById("runtime-badge"),
   settingsDlg: document.getElementById("settings"),
@@ -26,6 +27,7 @@ let engine = null;
 let runtime = "detecting"; // "webgpu" | "wasm"
 let messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
 let currentModel = els.modelSelect.value || "";
+let uploadedFiles = [];
 
 // --- UI helpers ---
 function addMsg(who, text) {
@@ -47,6 +49,106 @@ function setBadge(txt, ok = true) {
   els.runtimeBadge.style.background = ok ? "#dcfce7" : "#fee2e2";
   els.runtimeBadge.style.border = "1px solid " + (ok ? "#bbf7d0" : "#fecaca");
   els.runtimeBadge.style.color = ok ? "#14532d" : "#7f1d1d";
+}
+
+// --- File handling functions ---
+function getFileIcon(fileName) {
+  const ext = fileName.split('.').pop().toLowerCase();
+  const iconMap = {
+    // Text files
+    'txt': '📄', 'md': '📝', 'json': '📋', 'csv': '📊', 'xml': '📄', 'html': '🌐',
+    // Code files
+    'js': '📜', 'ts': '📜', 'jsx': '⚛️', 'tsx': '⚛️', 'vue': '💚', 'py': '🐍', 
+    'cpp': '⚙️', 'c': '⚙️', 'java': '☕', 'php': '🐘', 'rb': '💎', 'go': '🐹', 
+    'rs': '🦀', 'sh': '🐚', 'yml': '⚙️', 'yaml': '⚙️',
+    // Documents
+    'pdf': '📕', 'docx': '📘', 'doc': '📘', 'rtf': '📄', 'odt': '📄',
+    // Images
+    'png': '🖼️', 'jpg': '🖼️', 'jpeg': '🖼️', 'gif': '🖼️', 'bmp': '🖼️', 
+    'webp': '🖼️', 'svg': '🖼️'
+  };
+  return iconMap[ext] || '📎';
+}
+
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+async function readFileContent(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    // Handle different file types
+    if (file.type.startsWith('image/')) {
+      reader.onload = () => resolve({
+        type: 'image',
+        content: reader.result,
+        name: file.name,
+        size: file.size
+      });
+      reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
+      reader.onload = () => resolve({
+        type: 'pdf',
+        content: reader.result,
+        name: file.name,
+        size: file.size
+      });
+      reader.readAsArrayBuffer(file);
+    } else {
+      // Text-based files
+      reader.onload = () => resolve({
+        type: 'text',
+        content: reader.result,
+        name: file.name,
+        size: file.size
+      });
+      reader.readAsText(file);
+    }
+    
+    reader.onerror = reject;
+  });
+}
+
+function updateFilePreview() {
+  if (uploadedFiles.length === 0) {
+    els.filePreview.style.display = 'none';
+    return;
+  }
+  
+  els.filePreview.style.display = 'block';
+  els.filePreview.innerHTML = uploadedFiles.map((file, index) => `
+    <div class="file-item">
+      <span class="file-icon">${getFileIcon(file.name)}</span>
+      <div class="file-info">
+        <div class="file-name">${file.name}</div>
+        <div class="file-size">${formatFileSize(file.size)}</div>
+      </div>
+      <button class="remove-file" onclick="removeFile(${index})">×</button>
+    </div>
+  `).join('');
+}
+
+window.removeFile = function(index) {
+  uploadedFiles.splice(index, 1);
+  updateFilePreview();
+}
+
+async function handleFileUpload(files) {
+  for (const file of files) {
+    try {
+      const fileData = await readFileContent(file);
+      uploadedFiles.push(fileData);
+    } catch (error) {
+      console.error('Error reading file:', error);
+      addMsg("assistant", `Error reading file ${file.name}: ${error.message}`);
+    }
+  }
+  updateFilePreview();
 }
 
 // --- Function-calling demo schema ---
@@ -296,11 +398,38 @@ async function reloadModel() {
 // --- Chat send ---
 async function handleSend(prompt) {
   if (!engine) return;
-  addMsg("user", prompt);
+  
+  // Prepare the message with file content if any
+  let fullPrompt = prompt;
+  if (uploadedFiles.length > 0) {
+    const fileContents = uploadedFiles.map(file => {
+      if (file.type === 'text') {
+        return `\n\n--- File: ${file.name} ---\n${file.content}\n--- End of ${file.name} ---`;
+      } else if (file.type === 'image') {
+        return `\n\n--- Image: ${file.name} (${formatFileSize(file.size)}) ---\n[Image content available for analysis]\n--- End of ${file.name} ---`;
+      } else if (file.type === 'pdf') {
+        return `\n\n--- PDF: ${file.name} (${formatFileSize(file.size)}) ---\n[PDF content - text extraction may be limited]\n--- End of ${file.name} ---`;
+      }
+      return `\n\n--- File: ${file.name} (${formatFileSize(file.size)}) ---\n[File content available]\n--- End of ${file.name} ---`;
+    }).join('');
+    
+    fullPrompt = prompt + fileContents;
+    
+    // Show user message with file indicator
+    const fileIndicator = uploadedFiles.length > 0 ? ` 📎 (${uploadedFiles.length} file${uploadedFiles.length > 1 ? 's' : ''})` : '';
+    addMsg("user", prompt + fileIndicator);
+    
+    // Clear uploaded files after sending
+    uploadedFiles = [];
+    updateFilePreview();
+  } else {
+    addMsg("user", prompt);
+  }
+  
   let bubble = addMsg("assistant", "…");
   if (runtime === "webgpu") {
     const webllm = await import(WEBLLM_URL);
-    messages.push({ role: "user", content: prompt });
+    messages.push({ role: "user", content: fullPrompt });
     try {
       const chunks = await engine.chat.completions.create({
         messages,
@@ -323,7 +452,7 @@ async function handleSend(prompt) {
 } else {
   try {
     bubble.textContent = "Thinking (WASM)…";
-    const out = await engine.complete(prompt, { nPredict: 128, temp: 0.7 });
+    const out = await engine.complete(fullPrompt, { nPredict: 128, temp: 0.7 });
     bubble.textContent = out || "(no output)";
     messages.push({ role: "assistant", content: out || "" });
   } catch (e) {
@@ -344,44 +473,28 @@ els.form.addEventListener("submit", (e) => {
   handleSend(text);
 });
 
-// Handle demo button clicks
-document.querySelectorAll('.demo-btn').forEach(button => {
-  button.addEventListener('click', (e) => {
-    e.preventDefault();
-    const demoType = button.dataset.demo;
-    
-    // Check if the model supports function calling
-    const modelId = els.modelSelect.value;
-    const supportsFunctionCalling = FUNCTION_CALLING_MODELS.includes(modelId);
-    
-    if (!supportsFunctionCalling) {
-      const errorMsg = `This model (${modelId}) does not support function calling.\n\n` +
-        `Please switch to one of the following models that support function calling:\n` +
-        FUNCTION_CALLING_MODELS.join('\n');
-      addMsg("assistant", errorMsg);
-      return;
-    }
+// Handle file upload
+els.fileBtn.addEventListener('click', () => {
+  els.fileInput.click();
+});
 
-    let prompt = "";
-    
-    switch(demoType) {
-      case 'time':
-        prompt = "What time is it now? If you can, call getTime().";
-        break;
-      case 'math':
-        prompt = "Calculate the result of (15 + 8) * 3 / 7. If you can, use the calculate function.";
-        break;
-      case 'weather':
-        prompt = "What's the weather like in New York? If you can, use the getWeather function.";
-        break;
-      default:
-        return;
-    }
-    
-    // Set the prompt and trigger send
-    els.prompt.value = prompt;
-    els.form.dispatchEvent(new Event('submit'));
-  });
+els.fileInput.addEventListener('change', (e) => {
+  if (e.target.files.length > 0) {
+    handleFileUpload(Array.from(e.target.files));
+  }
+});
+
+// Handle drag and drop
+els.messages.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+});
+
+els.messages.addEventListener('drop', (e) => {
+  e.preventDefault();
+  if (e.dataTransfer.files.length > 0) {
+    handleFileUpload(Array.from(e.dataTransfer.files));
+  }
 });
 
 els.settingsBtn.addEventListener("click", () => els.settingsDlg.showModal());
@@ -402,9 +515,7 @@ els.clearBtn.addEventListener("click", () => {
 function updateChatInterface(enabled) {
   els.prompt.disabled = !enabled;
   els.send.disabled = !enabled;
-  document.querySelectorAll('.demo-btn').forEach(btn => {
-    btn.disabled = !enabled;
-  });
+  els.fileBtn.disabled = !enabled;
   if (!enabled) {
     els.prompt.placeholder = "Please select a model from Settings first";
   } else {
