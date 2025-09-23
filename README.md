@@ -96,24 +96,59 @@ npx http-server web -p 8000
 ### Model Selection and Supported IDs
 Select models from the Settings dialog. First load will download model shards (cached afterwards).
 
-Pre-populated options (WebLLM prebuilt, with correct `-MLC` IDs):
-- `TinyLlama-1.1B-Chat-v0.4-q4f16_1-MLC` — fastest, small Q&A
-- `Phi-2-q4f16_1-MLC` — strong reasoning for its size
-- `Phi-3-mini-4k-instruct-q4f16_1-MLC` — efficient, modern
-- `Mistral-7B-Instruct-v0.3-q4f16_1-MLC` — recommended general use
-- `Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC` — capable, supports function calling
-- `Llama-3.2-3B-Instruct-q4f16_1-MLC` — compact, latest small
-- `Llama-3.1-8B-Instruct-q4f16_1-MLC` — strong instruction following
-- `DeepSeek-Coder-1.3B-Instruct-q4f16_1-MLC` — coding‑optimized
-- `gemma-2b-it-q4f16_1-MLC` — efficient Google model
+**Updated Model List (2024 - WebLLM v0.2.79 Compatible):**
+
+**Ultra Small Models (< 1B parameters):**
+- `SmolLM2-135M-Instruct-q0f16-MLC` — Ultra-fast tiny model (~360MB VRAM)
+- `SmolLM2-360M-Instruct-q4f16_1-MLC` — Very fast small model (~376MB VRAM)
+
+**Small Models (1-2B parameters):**
+- `Llama-3.2-1B-Instruct-q4f16_1-MLC` — Meta's latest ultra-compact model (~879MB VRAM)
+- `Qwen2.5-0.5B-Instruct-q4f16_1-MLC` — Alibaba's tiny but capable model (~945MB VRAM)
+- `Qwen2.5-1.5B-Instruct-q4f16_1-MLC` — Balanced small model (~1.6GB VRAM)
+- `SmolLM2-1.7B-Instruct-q4f16_1-MLC` — HuggingFace's efficient model (~1.8GB VRAM)
+
+**Medium Models (2-4B parameters):**
+- `gemma-2-2b-it-q4f16_1-MLC-1k` — Google's latest efficient model (~1.6GB VRAM)
+- `Qwen2.5-3B-Instruct-q4f16_1-MLC` — Alibaba's mid-size model (~2.5GB VRAM)
+- `Phi-3.5-mini-instruct-q4f16_1-MLC-1k` — Microsoft's latest small model (~2.5GB VRAM)
+
+**Large Models (7-8B parameters):**
+- `Mistral-7B-Instruct-v0.3-q4f16_1-MLC` — Recommended general use (~4.6GB VRAM)
+- `Llama-3.1-8B-Instruct-q4f16_1-MLC-1k` — Meta's powerful model (~4.6GB VRAM)
+- `Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC` — Function calling support (~5GB VRAM)
+- `Hermes-3-Llama-3.1-8B-q4f16_1-MLC` — Latest Hermes with advanced capabilities (~4.9GB VRAM)
+
+**Specialized Models:**
+- `Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC` — Coding specialist (~1.6GB VRAM)
+- `Qwen2.5-Coder-3B-Instruct-q4f16_1-MLC` — Advanced coding model (~2.5GB VRAM)
+- `Qwen2.5-Math-1.5B-Instruct-q4f16_1-MLC` — Mathematical reasoning (~1.6GB VRAM)
+
+**DeepSeek Models:**
+- `DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC` — Latest DeepSeek reasoning model (~5.1GB VRAM)
+- `DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC` — DeepSeek reasoning based on Llama (~5GB VRAM)
+
+**Note:** Previous models like `Phi-2-q4f16_1-MLC` and `DeepSeek-Coder-1.3B-Instruct-q4f16_1-MLC` are no longer in the WebLLM prebuilt config and have been replaced with newer, more efficient alternatives.
 
 Function calling is supported by select models (e.g., Hermes 2 Pro, Llama 3.x instruct). Demo buttons were removed from UI for simplicity, but function calling can still be invoked programmatically.
 
-### File Uploads (Attach Context)
+### File Uploads (Attach Context) - Enhanced Memory Management
 - Click the paperclip button or drag & drop files into the chat area
-- Supported types: text/code (`.txt`, `.md`, `.json`, `.csv`, `.xml`, `.html`, `.js`, `.ts`, `.jsx`, `.tsx`, `.vue`, `.py`, `.cpp`, `.c`, `.java`, `.php`, `.rb`, `.go`, `.rs`, `.sh`, `.yml`, `.yaml`), docs (`.pdf`, `.docx`, `.doc`, `.rtf`, `.odt`), images (`.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.webp`, `.svg`)
-- Text/code contents are inlined into the prompt; PDFs are attached with a note; images are passed as data URLs (model capabilities vary)
+- **File Size Limits (to prevent memory allocation errors):**
+  - Maximum individual file size: 50MB
+  - Maximum text file size: 10MB (larger files are truncated)
+  - Maximum image file size: 20MB
+  - Maximum total files: 10 files
+  - Maximum combined size: 100MB
+- **Supported types:** text/code (`.txt`, `.md`, `.json`, `.csv`, `.xml`, `.html`, `.js`, `.ts`, `.jsx`, `.tsx`, `.vue`, `.py`, `.cpp`, `.c`, `.java`, `.php`, `.rb`, `.go`, `.rs`, `.sh`, `.yml`, `.yaml`), docs (`.pdf`, `.docx`, `.doc`, `.rtf`, `.odt`), images (`.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.webp`, `.svg`)
+- **Smart Processing:**
+  - Text/code contents are inlined into the prompt with length limits
+  - Large text files are automatically truncated with notification
+  - PDFs show metadata only to prevent memory issues
+  - Images are processed as data URLs (model capabilities vary)
+  - Automatic memory cleanup after processing
 - Remove attachments before sending using the × button in the preview
+- **Memory Management:** Automatic garbage collection hints and chunked processing for large files
 
 ### Progressive Web App (PWA)
 - **Service Worker** (`sw.js`) - For offline functionality

@@ -80,10 +80,25 @@ function formatFileSize(bytes) {
 
 async function readFileContent(file) {
   return new Promise((resolve, reject) => {
+    // File size limits to prevent memory issues
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB limit
+    const MAX_TEXT_SIZE = 10 * 1024 * 1024; // 10MB for text files
+    const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB for images
+    
+    // Check file size limits
+    if (file.size > MAX_FILE_SIZE) {
+      reject(new Error(`File too large: ${formatFileSize(file.size)}. Maximum size is ${formatFileSize(MAX_FILE_SIZE)}.`));
+      return;
+    }
+    
     const reader = new FileReader();
     
-    // Handle different file types
+    // Handle different file types with specific size limits
     if (file.type.startsWith('image/')) {
+      if (file.size > MAX_IMAGE_SIZE) {
+        reject(new Error(`Image too large: ${formatFileSize(file.size)}. Maximum image size is ${formatFileSize(MAX_IMAGE_SIZE)}.`));
+        return;
+      }
       reader.onload = () => resolve({
         type: 'image',
         content: reader.result,
@@ -92,25 +107,38 @@ async function readFileContent(file) {
       });
       reader.readAsDataURL(file);
     } else if (file.type === 'application/pdf') {
-      reader.onload = () => resolve({
+      // For PDFs, just store metadata without reading content to avoid memory issues
+      resolve({
         type: 'pdf',
-        content: reader.result,
+        content: `[PDF file: ${file.name} (${formatFileSize(file.size)}) - Content not loaded to prevent memory issues. Please use a smaller file or extract text manually.]`,
         name: file.name,
         size: file.size
       });
-      reader.readAsArrayBuffer(file);
     } else {
-      // Text-based files
-      reader.onload = () => resolve({
-        type: 'text',
-        content: reader.result,
-        name: file.name,
-        size: file.size
-      });
-      reader.readAsText(file);
+      // Text-based files with chunked reading for large files
+      if (file.size > MAX_TEXT_SIZE) {
+        // For large text files, read only the first portion
+        const blob = file.slice(0, MAX_TEXT_SIZE);
+        reader.onload = () => resolve({
+          type: 'text',
+          content: reader.result + `\n\n[File truncated - showing first ${formatFileSize(MAX_TEXT_SIZE)} of ${formatFileSize(file.size)}]`,
+          name: file.name,
+          size: file.size,
+          truncated: true
+        });
+        reader.readAsText(blob);
+      } else {
+        reader.onload = () => resolve({
+          type: 'text',
+          content: reader.result,
+          name: file.name,
+          size: file.size
+        });
+        reader.readAsText(file);
+      }
     }
     
-    reader.onerror = reject;
+    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
   });
 }
 
@@ -139,13 +167,42 @@ window.removeFile = function(index) {
 }
 
 async function handleFileUpload(files) {
+  const MAX_FILES = 10; // Limit number of files to prevent memory issues
+  const totalFiles = uploadedFiles.length + files.length;
+  
+  if (totalFiles > MAX_FILES) {
+    addMsg("assistant", `Too many files. Maximum ${MAX_FILES} files allowed. Currently have ${uploadedFiles.length} files.`);
+    return;
+  }
+  
+  // Calculate total size to prevent memory overload
+  let totalSize = uploadedFiles.reduce((sum, file) => sum + file.size, 0);
+  const newFilesSize = Array.from(files).reduce((sum, file) => sum + file.size, 0);
+  const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB total limit
+  
+  if (totalSize + newFilesSize > MAX_TOTAL_SIZE) {
+    addMsg("assistant", `Total file size too large. Maximum total size is ${formatFileSize(MAX_TOTAL_SIZE)}. Current total: ${formatFileSize(totalSize)}, trying to add: ${formatFileSize(newFilesSize)}.`);
+    return;
+  }
+  
   for (const file of files) {
     try {
+      // Add progress indication for large files
+      if (file.size > 5 * 1024 * 1024) { // 5MB
+        addMsg("assistant", `Processing large file: ${file.name} (${formatFileSize(file.size)})...`);
+      }
+      
       const fileData = await readFileContent(file);
       uploadedFiles.push(fileData);
+      
+      // Force garbage collection hint for large files
+      if (file.size > 10 * 1024 * 1024 && window.gc) {
+        window.gc();
+      }
+      
     } catch (error) {
       console.error('Error reading file:', error);
-      addMsg("assistant", `Error reading file ${file.name}: ${error.message}`);
+      addMsg("assistant", `❌ Error reading file ${file.name}: ${error.message}`);
     }
   }
   updateFilePreview();
@@ -402,26 +459,51 @@ async function handleSend(prompt) {
   // Prepare the message with file content if any
   let fullPrompt = prompt;
   if (uploadedFiles.length > 0) {
-    const fileContents = uploadedFiles.map(file => {
-      if (file.type === 'text') {
-        return `\n\n--- File: ${file.name} ---\n${file.content}\n--- End of ${file.name} ---`;
-      } else if (file.type === 'image') {
-        return `\n\n--- Image: ${file.name} (${formatFileSize(file.size)}) ---\n[Image content available for analysis]\n--- End of ${file.name} ---`;
-      } else if (file.type === 'pdf') {
-        return `\n\n--- PDF: ${file.name} (${formatFileSize(file.size)}) ---\n[PDF content - text extraction may be limited]\n--- End of ${file.name} ---`;
+    try {
+      const fileContents = uploadedFiles.map(file => {
+        if (file.type === 'text') {
+          // Limit text content length to prevent memory issues
+          const maxTextLength = 50000; // 50KB of text per file
+          let content = file.content;
+          if (content.length > maxTextLength) {
+            content = content.substring(0, maxTextLength) + `\n[Content truncated - showing first ${maxTextLength} characters of ${content.length}]`;
+          }
+          return `\n\n--- File: ${file.name} ---\n${content}\n--- End of ${file.name} ---`;
+        } else if (file.type === 'image') {
+          return `\n\n--- Image: ${file.name} (${formatFileSize(file.size)}) ---\n[Image content available for analysis]\n--- End of ${file.name} ---`;
+        } else if (file.type === 'pdf') {
+          return `\n\n--- PDF: ${file.name} (${formatFileSize(file.size)}) ---\n${file.content}\n--- End of ${file.name} ---`;
+        }
+        return `\n\n--- File: ${file.name} (${formatFileSize(file.size)}) ---\n[File content available]\n--- End of ${file.name} ---`;
+      }).join('');
+      
+      // Check if the combined prompt is too large
+      const maxPromptLength = 200000; // 200KB total prompt limit
+      if ((prompt + fileContents).length > maxPromptLength) {
+        addMsg("assistant", `❌ Combined message too large (${formatFileSize((prompt + fileContents).length)}). Please reduce file content or number of files. Maximum size: ${formatFileSize(maxPromptLength)}.`);
+        return;
       }
-      return `\n\n--- File: ${file.name} (${formatFileSize(file.size)}) ---\n[File content available]\n--- End of ${file.name} ---`;
-    }).join('');
-    
-    fullPrompt = prompt + fileContents;
-    
-    // Show user message with file indicator
-    const fileIndicator = uploadedFiles.length > 0 ? ` 📎 (${uploadedFiles.length} file${uploadedFiles.length > 1 ? 's' : ''})` : '';
-    addMsg("user", prompt + fileIndicator);
-    
-    // Clear uploaded files after sending
-    uploadedFiles = [];
-    updateFilePreview();
+      
+      fullPrompt = prompt + fileContents;
+      
+      // Show user message with file indicator
+      const fileIndicator = uploadedFiles.length > 0 ? ` 📎 (${uploadedFiles.length} file${uploadedFiles.length > 1 ? 's' : ''})` : '';
+      addMsg("user", prompt + fileIndicator);
+      
+      // Clear uploaded files after sending and force cleanup
+      uploadedFiles = [];
+      updateFilePreview();
+      
+      // Force garbage collection for memory cleanup
+      if (window.gc) {
+        window.gc();
+      }
+      
+    } catch (error) {
+      console.error('Error processing files:', error);
+      addMsg("assistant", `❌ Error processing files: ${error.message}`);
+      return;
+    }
   } else {
     addMsg("user", prompt);
   }
@@ -573,8 +655,14 @@ const FUNCTION_CALLING_MODELS = [
   "Hermes-2-Pro-Mistral-7B-q4f16_1-MLC",
   "Hermes-3-Llama-3.1-8B-q4f32_1-MLC",
   "Hermes-3-Llama-3.1-8B-q4f16_1-MLC",
+  "Hermes-3-Llama-3.2-3B-q4f16_1-MLC",
+  "Hermes-3-Llama-3.2-3B-q4f32_1-MLC",
   "Llama-3.1-8B-Instruct-q4f16_1-MLC",
-  "Llama-3.2-3B-Instruct-q4f16_1-MLC"
+  "Llama-3.1-8B-Instruct-q4f16_1-MLC-1k",
+  "Llama-3.1-8B-Instruct-q4f32_1-MLC",
+  "Llama-3.1-8B-Instruct-q4f32_1-MLC-1k",
+  "Llama-3.2-3B-Instruct-q4f16_1-MLC",
+  "Llama-3.2-3B-Instruct-q4f32_1-MLC"
 ];
 
 async function runToolDemo() {
