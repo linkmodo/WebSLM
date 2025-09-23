@@ -50,23 +50,109 @@ function setBadge(txt, ok = true) {
 }
 
 // --- Function-calling demo schema ---
-const tools = [{
-  type: "function",
-  function: {
-    name: "getTime",
-    description: "Get the current local time as an ISO string.",
-    parameters: {
-      type: "object",
-      properties: {},
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "getTime",
+      description: "Get the current local time as an ISO string.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
     },
   },
-}];
-
-function toolRouter(name, _args) {
-  if (name === "getTime") {
-    return { now: new Date().toISOString() };
+  {
+    type: "function",
+    function: {
+      name: "calculate",
+      description: "Calculate the result of a mathematical expression.",
+      parameters: {
+        type: "object",
+        properties: {
+          expression: {
+            type: "string",
+            description: "The mathematical expression to evaluate (e.g., '2 + 2 * 3')"
+          }
+        },
+        required: ["expression"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "getWeather",
+      description: "Get the current weather for a specified location.",
+      parameters: {
+        type: "object",
+        properties: {
+          location: {
+            type: "string",
+            description: "The city and optional state/country (e.g., 'New York' or 'London, UK')"
+          }
+        },
+        required: ["location"]
+      }
+    }
   }
-  return { error: "Unknown tool" };
+];
+
+function toolRouter(name, args) {
+  try {
+    switch (name) {
+      case "getTime":
+        return { 
+          success: true,
+          time: new Date().toISOString(),
+          formatted: new Date().toLocaleString()
+        };
+        
+      case "calculate":
+        try {
+          // Security note: In a real app, you'd want to validate the expression
+          // to prevent code injection. This is a simplified example.
+          const result = Function(`return (${args.expression})`)();
+          return { 
+            success: true, 
+            result: result,
+            expression: args.expression
+          };
+        } catch (e) {
+          return { 
+            success: false, 
+            error: "Invalid expression",
+            message: e.message
+          };
+        }
+        
+      case "getWeather":
+        // Mock weather data - in a real app, you'd call a weather API
+        const weatherData = {
+          location: args.location,
+          temperature: Math.round(Math.random() * 30 + 10), // Random temp between 10-40°C
+          condition: ["Sunny", "Partly Cloudy", "Cloudy", "Rainy", "Thunderstorm"][Math.floor(Math.random() * 5)],
+          humidity: Math.round(Math.random() * 50 + 30), // 30-80%
+          wind: (Math.random() * 20).toFixed(1) // 0-20 km/h
+        };
+        return { 
+          success: true,
+          ...weatherData
+        };
+        
+      default:
+        return { 
+          success: false, 
+          error: "Unknown function" 
+        };
+    }
+  } catch (e) {
+    return { 
+      success: false, 
+      error: "Error processing function call",
+      message: e.message
+    };
+  }
 }
 
 // --- Runtime detection + init ---
@@ -182,6 +268,7 @@ async function handleSend(prompt) {
 }
 
 
+// Handle form submission
 els.form.addEventListener("submit", (e) => {
   e.preventDefault();
   const text = els.prompt.value.trim();
@@ -190,9 +277,44 @@ els.form.addEventListener("submit", (e) => {
   handleSend(text);
 });
 
-els.toolBtn.addEventListener("click", () => { runToolDemo(); return; /* below is legacy */
+// Handle demo button clicks
+document.querySelectorAll('.demo-btn').forEach(button => {
+  button.addEventListener('click', (e) => {
+    e.preventDefault();
+    const demoType = button.dataset.demo;
+    
+    // Check if the model supports function calling
+    const modelId = els.modelSelect.value;
+    const supportsFunctionCalling = FUNCTION_CALLING_MODELS.includes(modelId);
+    
+    if (!supportsFunctionCalling) {
+      const errorMsg = `This model (${modelId}) does not support function calling.\n\n` +
+        `Please switch to one of the following models that support function calling:\n` +
+        FUNCTION_CALLING_MODELS.join('\n');
+      addMsg("assistant", errorMsg);
+      return;
+    }
 
-  
+    let prompt = "";
+    
+    switch(demoType) {
+      case 'time':
+        prompt = "What time is it now? If you can, call getTime().";
+        break;
+      case 'math':
+        prompt = "Calculate the result of (15 + 8) * 3 / 7. If you can, use the calculate function.";
+        break;
+      case 'weather':
+        prompt = "What's the weather like in New York? If you can, use the getWeather function.";
+        break;
+      default:
+        return;
+    }
+    
+    // Set the prompt and trigger send
+    els.prompt.value = prompt;
+    els.form.dispatchEvent(new Event('submit'));
+  });
 });
 
 els.settingsBtn.addEventListener("click", () => els.settingsDlg.showModal());

@@ -280,7 +280,41 @@ dialog {
 .input-row input{flex:1;padding:10px;border-radius:10px;border:1px solid #d1d5db;background:#ffffff;color:#1f2937}
 .input-row button{padding:10px 14px;border-radius:10px;border:1px solid #d1d5db;background:#4f46e5;color:#ffffff;cursor:pointer}
 .input-row button:hover{background:#4338ca}
-.toolrow{margin-top:6px;display:flex;gap:8px}
+
+.toolrow {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.demo-btn {
+  background: rgba(99, 102, 241, 0.1);
+  color: #e0e7ff;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.demo-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.5);
+  transform: translateY(-1px);
+}
+
+.demo-btn:active {
+  transform: translateY(0);
+}
+
+.demo-btn::before {
+  font-size: 1.2em;
+}
 dialog{border:none;border-radius:12px;padding:0;overflow:hidden}
 .settings{padding:16px;background:#ffffff;color:#1f2937;display:flex;flex-direction:column;gap:10px;min-width:320px}
 .settings h3{margin:0 0 8px 0}
