@@ -209,9 +209,9 @@ async function init() {
         };
 
         try {
-          engine = await webllm.CreateWebWorkerEngine(
+          // Use the main-thread engine creation API compatible with v0.2.79
+          engine = await webllm.CreateMLCEngine(
             currentModel,
-            { baseUrl: "/models" },
             engineConfig
           );
 
