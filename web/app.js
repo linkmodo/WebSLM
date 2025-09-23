@@ -231,28 +231,46 @@ async function init() {
           return;
         }
       } catch (err) {
-        console.warn("WebGPU path failed, falling back to WASM:", err);
+        console.warn("WebGPU path failed, will use WASM fallback:", err);
+        // Do not rethrow here; allow outer catch to handle and continue to WASM
+        throw err;
       }
+    }
+  } catch (err) {
+    // Swallow error here to proceed to WASM fallback
   }
 
-  // Fallback to WASM (wllama)
   // Fallback to WASM (wllama)
   runtime = "wasm";
   setBadge("WASM (wllama) — initializing…", true);
   els.initLabel.textContent = "Loading tiny GGUF (first run downloads)…";
 
-  // Import the CDN helper; it can be a function (returning assets) OR a ready assets object.
-// inside init(), WASM fallback block in app.js
-const { default: WasmFromCDN } = await import(WLLAMA_URL);
-const assets = (typeof WasmFromCDN === "function") ? WasmFromCDN() : WasmFromCDN;
+  try {
+    // Import the CDN helper; it can be a function (returning assets) OR a ready assets object.
+    const { default: WasmFromCDN } = await import(WLLAMA_URL);
+    const assets = (typeof WasmFromCDN === "function") ? WasmFromCDN() : WasmFromCDN;
 
-const { startWasmFallback } = await import("./fallback/wllama.js");
-engine = await startWasmFallback({ WasmFromCDN: assets });
+    const { startWasmFallback } = await import("./fallback/wllama.js");
+    engine = await startWasmFallback({ WasmFromCDN: assets });
 
-
-  setBadge("WASM (wllama)");
-  els.initLabel.textContent = "Ready (fallback).";
+    setBadge("WASM (wllama)");
+    els.initLabel.textContent = "Ready (fallback).";
+  } catch (e) {
+    console.error("Error initializing WASM fallback:", e);
+    setBadge("Initialization failed", false);
+    els.initLabel.textContent = "Failed to initialize. Check console for details.";
+    throw e;
+  }
 }
+
+// Initialize the application when the page loads
+window.addEventListener('load', () => {
+  try {
+    init();
+  } catch (error) {
+    console.error("Error initializing application:", error);
+  }
+});
 
 
 async function reloadModel() {
@@ -369,9 +387,6 @@ els.clearBtn.addEventListener("click", () => {
   els.messages.innerHTML = "";
 });
 
-// Show settings dialog on start
-els.settingsDlg.showModal();
-
 // Enable/disable chat interface based on model selection
 function updateChatInterface(enabled) {
   els.prompt.disabled = !enabled;
@@ -413,6 +428,16 @@ els.settingsDlg.addEventListener('close', async () => {
     updateChatInterface(false);
   }
 });
+
+// Show settings dialog on start (after all event listeners are set up)
+if (els.settingsDlg) {
+  // Use setTimeout to ensure the dialog shows after the page is fully loaded
+  window.addEventListener('load', () => {
+    els.settingsDlg.showModal();
+  });
+} else {
+  console.error('Settings dialog element not found');
+}
 
 
 const FUNCTION_CALLING_MODELS = [
@@ -498,6 +523,8 @@ async function runToolDemo() {
     }
   } catch (e) {
     console.error("Error in runToolDemo:", e);
-    bubble.textContent = "Error: " + (e.message || "Failed to process request");
+    if (bubble) {
+      bubble.textContent = "Error: " + (e.message || "Failed to process request");
+    }
   }
 }
