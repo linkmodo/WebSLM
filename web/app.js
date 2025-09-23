@@ -25,7 +25,7 @@ const els = {
 let engine = null;
 let runtime = "detecting"; // "webgpu" | "wasm"
 let messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
-let currentModel = els.modelSelect.value;
+let currentModel = els.modelSelect.value || "";
 
 // --- UI helpers ---
 function addMsg(who, text) {
@@ -159,6 +159,13 @@ function toolRouter(name, args) {
 async function init() {
   // Clear any existing messages
   els.messages.innerHTML = "";
+  
+  // Check if a model is selected
+  if (!currentModel) {
+    addMsg("assistant", "Please select a model from the Settings menu to get started.");
+    updateChatInterface(false);
+    return;
+  }
   
   // Show loading state
   const loadingMsg = addMsg("assistant", "Loading model... This may take a moment as we download the model weights.");
@@ -431,8 +438,9 @@ els.settingsDlg.addEventListener('close', async () => {
   if (selectedModel && selectedModel !== currentModel) {
     currentModel = selectedModel;
     await init();
-    updateChatInterface(true);
   } else if (!selectedModel) {
+    currentModel = "";
+    addMsg("assistant", "Please select a model from the Settings menu to get started.");
     updateChatInterface(false);
   }
 });
@@ -453,7 +461,9 @@ const FUNCTION_CALLING_MODELS = [
   "Hermes-2-Pro-Llama-3-8B-q4f32_1-MLC",
   "Hermes-2-Pro-Mistral-7B-q4f16_1-MLC",
   "Hermes-3-Llama-3.1-8B-q4f32_1-MLC",
-  "Hermes-3-Llama-3.1-8B-q4f16_1-MLC"
+  "Hermes-3-Llama-3.1-8B-q4f16_1-MLC",
+  "Llama-3.1-8B-Instruct-q4f16_1-MLC",
+  "Llama-3.2-3B-Instruct-q4f16_1-MLC"
 ];
 
 async function runToolDemo() {
