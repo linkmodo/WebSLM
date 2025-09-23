@@ -49,11 +49,15 @@
         <h3>Settings</h3>
         <label title="Select the AI model to use. Larger models are more capable but require more resources.">Model (WebLLM)
           <select id="model-select">
-            <option value="TinyLlama-1.1B-Chat-v0.4-q4f16_1">TinyLlama 1.1B Chat (q4f16_1)</option>
-            <option value="Phi-2-q4f16_1">Phi-2 (q4f16_1)</option>
-            <option value="Mistral-7B-Instruct-v0.2-q4f16_1">Mistral 7B Instruct (q4f16_1)</option>
-            <option value="Llama-3.1-8B-Instruct">Llama 3.1 8B Instruct</option>
+            <option value="TinyLlama-1.1B-Chat-v0.4-q4f16_1" data-desc="TinyLlama 1.1B (1.1B parameters) - Fastest option, good for quick responses on low-end devices. Best for simple Q&A and basic tasks.">TinyLlama 1.1B (Fastest)</option>
+            <option value="Phi-2-q4f16_1" data-desc="Phi-2 (2.7B parameters) - Microsoft's small but powerful model. Excellent reasoning and coding capabilities for its size.">Phi-2 (Best Balance)</option>
+            <option value="Mistral-7B-Instruct-v0.2-q4f16_1" data-desc="Mistral 7B (7B parameters) - Strong performance in reasoning and instruction following. Good balance of capability and speed.">Mistral 7B (Recommended)</option>
+            <option value="Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC" data-desc="Hermes 2 Pro (8B parameters) - Fine-tuned version of Llama 3. Excellent for complex tasks and detailed responses. Requires more resources.">Hermes 2 Pro (Most Capable)</option>
+            <option value="Llama-3.1-8B-Instruct" data-desc="Llama 3.1 8B (8B parameters) - Meta's latest small model. Great all-around performance with strong instruction following.">Llama 3.1 8B (Latest)</option>
           </select>
+          <div id="model-description" class="model-description">
+            Select a model to see details
+          </div>
         </label>
         <label title="Set a fixed random seed for reproducible outputs. Same seed + same input = same output. 0 means random.">
           Seed 

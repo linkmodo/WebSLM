@@ -157,44 +157,82 @@ function toolRouter(name, args) {
 
 // --- Runtime detection + init ---
 async function init() {
-  // Try WebGPU first
-  if (navigator.gpu) {
-    try {
-      const webllm = await import(WEBLLM_URL);
-
-      // Dynamically populate the model dropdown from WebLLM's prebuilt list
+  // Clear any existing messages
+  els.messages.innerHTML = "";
+  
+  // Show loading state
+  const loadingMsg = addMsg("assistant", "Loading model... This may take a moment as we download the model weights.");
+  
+  try {
+    // Try WebGPU first
+    if (navigator.gpu) {
       try {
-        const list = webllm.prebuiltAppConfig?.model_list || [];
-        if (Array.isArray(list) && list.length) {
-          els.modelSelect.innerHTML = "";
-          for (const m of list) {
-            const opt = document.createElement("option");
-            opt.value = m.model_id;          // <-- guaranteed valid ID
-            opt.textContent = m.model_id;
-            els.modelSelect.appendChild(opt);
+        const webllm = await import(WEBLLM_URL);
+        
+        // Only try to populate model list if it's empty
+        if (els.modelSelect.options.length <= 1) { // Assuming there's a default option
+          try {
+            const list = webllm.prebuiltAppConfig?.model_list || [];
+            if (Array.isArray(list) && list.length) {
+              // Keep the first option (if exists) and add the rest
+              while (els.modelSelect.options.length > 1) {
+                els.modelSelect.remove(1);
+              }
+              for (const m of list) {
+                const opt = document.createElement("option");
+                opt.value = m.model_id;
+                opt.textContent = m.model_id;
+                els.modelSelect.appendChild(opt);
+              }
+              // Select the first model by default if none selected
+              if (!currentModel && list.length > 0) {
+                currentModel = list[0].model_id;
+                els.modelSelect.value = currentModel;
+              }
+            }
+          } catch (e) {
+            console.warn("Could not populate model list:", e);
+            loadingMsg.textContent = "Error loading model list. Please check the console for details.";
+            return;
           }
-          currentModel = els.modelSelect.value;
         }
-      } catch (e) {
-        console.warn("Could not populate model list:", e);
+
+        setBadge("WebGPU (WebLLM) — initializing…");
+        els.initLabel.textContent = `Loading ${currentModel} (first run downloads weights)…`;
+
+        const engineConfig = {
+          initProgressCallback: (r) => {
+            els.initLabel.textContent = r.text || "Loading model…";
+            loadingMsg.textContent = r.text || "Loading model…";
+          },
+          appConfig: webllm.prebuiltAppConfig, // use the prebuilt model list
+        };
+
+        try {
+          engine = await webllm.CreateWebWorkerEngine(
+            currentModel,
+            { baseUrl: "/models" },
+            engineConfig
+          );
+
+          setBadge("WebGPU (WebLLM)");
+          els.initLabel.textContent = `Model: ${currentModel.split('-')[0]}`;
+          loadingMsg.textContent = `Model ${currentModel} loaded and ready!`;
+          setTimeout(() => {
+            loadingMsg.textContent = "How can I help you today?";
+          }, 1000);
+          runtime = "webgpu";
+          return; // Success, exit the function
+        } catch (e) {
+          console.error("Error initializing model:", e);
+          loadingMsg.textContent = `Failed to load model: ${e.message}`;
+          setBadge("Error loading model", false);
+          updateChatInterface(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("WebGPU path failed, falling back to WASM:", err);
       }
-
-      setBadge("WebGPU (WebLLM) — initializing…");
-      els.initLabel.textContent = "Loading model (first run downloads weights)…";
-
-      const engineConfig = {
-        initProgressCallback: (r) => (els.initLabel.textContent = r.text || "Loading…"),
-        appConfig: webllm.prebuiltAppConfig, // use the prebuilt model list
-      };
-
-      engine = await webllm.CreateMLCEngine(currentModel, engineConfig);
-      runtime = "webgpu";
-      setBadge("WebGPU (WebLLM)");
-      els.initLabel.textContent = "Ready.";
-      return;
-    } catch (err) {
-      console.warn("WebGPU path failed, falling back to WASM:", err);
-    }
   }
 
   // Fallback to WASM (wllama)
@@ -331,8 +369,50 @@ els.clearBtn.addEventListener("click", () => {
   els.messages.innerHTML = "";
 });
 
-// Kick off init
-init();
+// Show settings dialog on start
+els.settingsDlg.showModal();
+
+// Enable/disable chat interface based on model selection
+function updateChatInterface(enabled) {
+  els.prompt.disabled = !enabled;
+  els.send.disabled = !enabled;
+  document.querySelectorAll('.demo-btn').forEach(btn => {
+    btn.disabled = !enabled;
+  });
+  if (!enabled) {
+    els.prompt.placeholder = "Please select a model from Settings first";
+  } else {
+    els.prompt.placeholder = "Ask anything (runs locally)...";
+  }
+}
+
+// Initially disable chat interface
+updateChatInterface(false);
+
+// Update model description when selection changes
+function updateModelDescription() {
+  const selectedOption = els.modelSelect.options[els.modelSelect.selectedIndex];
+  const description = selectedOption.getAttribute('data-desc') || 'No description available.';
+  document.getElementById('model-description').textContent = description;
+}
+
+// Initialize model description
+updateModelDescription();
+
+// Add event listener for model selection changes
+els.modelSelect.addEventListener('change', updateModelDescription);
+
+// Initialize after model is selected
+els.settingsDlg.addEventListener('close', async () => {
+  const selectedModel = els.modelSelect.value;
+  if (selectedModel && selectedModel !== currentModel) {
+    currentModel = selectedModel;
+    await init();
+    updateChatInterface(true);
+  } else if (!selectedModel) {
+    updateChatInterface(false);
+  }
+});
 
 
 const FUNCTION_CALLING_MODELS = [
