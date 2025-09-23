@@ -316,6 +316,22 @@ dialog {
   font-size: 1.2em;
 }
 dialog{border:none;border-radius:12px;padding:0;overflow:hidden}
+
+/* Center the dialog on screen */
+dialog[open] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  max-height: 85vh;
+}
+
+/* Allow dialog content to scroll if too tall */
+.settings {
+  overflow: auto;
+  max-height: 85vh;
+}
 .settings{padding:16px;background:#ffffff;color:#1f2937;display:flex;flex-direction:column;gap:10px;min-width:320px}
 .settings h3{margin:0 0 8px 0}
 .settings label{display:flex;flex-direction:column;gap:6px}
@@ -340,6 +356,7 @@ dialog{border:none;border-radius:12px;padding:0;overflow:hidden}
   margin-bottom: 4px;
 }
 
+/* Global fallback for model select */
 #model-select {
   padding: 8px;
   border-radius: 6px;
@@ -355,4 +372,16 @@ dialog{border:none;border-radius:12px;padding:0;overflow:hidden}
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
 }
 .settings input,.settings select{padding:8px;border-radius:8px;border:1px solid #d1d5db;background:#f9fafb;color:#1f2937}
+
+/* Ensure the select inside the settings dialog is readable (dark text on light bg) */
+.settings #model-select {
+  background: #f9fafb;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+}
+
+/* Darken the page behind the dialog for better contrast */
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
 .settings .row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}

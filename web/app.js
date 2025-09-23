@@ -222,6 +222,8 @@ async function init() {
             loadingMsg.textContent = "How can I help you today?";
           }, 1000);
           runtime = "webgpu";
+          // Enable chat interface for WebGPU success
+          updateChatInterface(true);
           return; // Success, exit the function
         } catch (e) {
           console.error("Error initializing model:", e);
@@ -255,6 +257,8 @@ async function init() {
 
     setBadge("WASM (wllama)");
     els.initLabel.textContent = "Ready (fallback).";
+    // Enable chat interface for WASM fallback as well
+    updateChatInterface(true);
   } catch (e) {
     console.error("Error initializing WASM fallback:", e);
     setBadge("Initialization failed", false);
@@ -399,6 +403,10 @@ function updateChatInterface(enabled) {
   } else {
     els.prompt.placeholder = "Ask anything (runs locally)...";
   }
+  // The reload button only applies to WebGPU (WebLLM) path
+  const reloadDisabled = runtime !== "webgpu";
+  els.reloadModelBtn.disabled = reloadDisabled;
+  els.reloadModelBtn.title = reloadDisabled ? "Reload available only for WebLLM (WebGPU) runtime" : "Reload the current WebLLM model";
 }
 
 // Initially disable chat interface
