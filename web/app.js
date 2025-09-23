@@ -51,33 +51,6 @@ function setBadge(txt, ok = true) {
   els.runtimeBadge.style.color = ok ? "#14532d" : "#7f1d1d";
 }
 
-// Heuristic description for prebuilt model ids
-function makeModelDescription(modelId) {
-  const id = modelId || "";
-  const lower = id.toLowerCase();
-  let family = "General";
-  if (lower.includes("tinyllama")) family = "TinyLlama";
-  else if (lower.includes("phi-3")) family = "Phi-3 Mini";
-  else if (lower.includes("phi-2")) family = "Phi-2";
-  else if (lower.includes("mistral")) family = "Mistral";
-  else if (lower.includes("llama-3.2")) family = "Llama 3.2";
-  else if (lower.includes("llama-3.1")) family = "Llama 3.1";
-  else if (lower.includes("gemma")) family = "Gemma";
-  else if (lower.includes("hermes")) family = "Hermes 2 Pro";
-
-  const sizeMatch = id.match(/(\d+(?:\.\d+)?[Bb])/i);
-  const quantMatch = id.match(/q\d+f\d+_\d/i);
-  const speed = /1\.1b|phi-2|phi-3-mini|3b/i.test(id) ? "Fast/Small" : /7b|8b/i.test(id) ? "Heavier" : "";
-  const notes = [];
-  if (/instruct|chat/i.test(id)) notes.push("Instruct");
-  if (/hermes|tool|fc/i.test(id) || /llama-3\.[12].*instruct/i.test(lower)) notes.push("Function calling capable");
-  if (quantMatch) notes.push(quantMatch[0]);
-
-  const parts = [family, sizeMatch ? sizeMatch[1] : "", speed].filter(Boolean).join(" · ");
-  const tail = notes.length ? ` (${notes.join(", ")})` : "";
-  return `${parts || id}${tail}`;
-}
-
 // --- File handling functions ---
 function getFileIcon(fileName) {
   const ext = fileName.split('.').pop().toLowerCase();
@@ -316,11 +289,8 @@ async function init() {
               }
               for (const m of list) {
                 const opt = document.createElement("option");
-                opt.value = m.model_id; // keep exact id for WebLLM
-                // produce a readable label but preserve id in value
-                const friendly = makeModelDescription(m.model_id);
-                opt.textContent = friendly;
-                opt.setAttribute('data-desc', friendly);
+                opt.value = m.model_id;
+                opt.textContent = m.model_id;
                 els.modelSelect.appendChild(opt);
               }
               // Select the first model by default if none selected
@@ -334,20 +304,6 @@ async function init() {
             loadingMsg.textContent = "Error loading model list. Please check the console for details.";
             return;
           }
-        }
-
-        // Validate that the selected model exists in prebuilt model list
-        const available = (webllm.prebuiltAppConfig?.model_list || []).some(m => m.model_id === currentModel);
-        if (!available) {
-          const errMsg = `Selected model ("${currentModel}") is not available in this WebLLM version.\n\n` +
-            `Please choose one of the supported models from the list.`;
-          addMsg("assistant", errMsg);
-          els.initLabel.textContent = "Please select a supported model.";
-          // Reset selection and prompt user
-          currentModel = "";
-          els.modelSelect.value = "";
-          try { els.settingsDlg.showModal(); } catch {}
-          return;
         }
 
         setBadge("WebGPU (WebLLM) — initializing…");
@@ -611,26 +567,27 @@ if (els.settingsDlg) {
 }
 
 
-function supportsFunctionCalling(modelId) {
-  if (!modelId) return false;
-  const id = modelId.toLowerCase();
-  // Heuristics: Hermes 2/3, Llama 3.x Instruct models often have tool calling
-  if (id.includes('hermes')) return true;
-  if (/llama-3\.[12].*instruct/.test(id)) return true;
-  // Extend as needed for other families
-  return false;
-}
+const FUNCTION_CALLING_MODELS = [
+  "Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC",
+  "Hermes-2-Pro-Llama-3-8B-q4f32_1-MLC",
+  "Hermes-2-Pro-Mistral-7B-q4f16_1-MLC",
+  "Hermes-3-Llama-3.1-8B-q4f32_1-MLC",
+  "Hermes-3-Llama-3.1-8B-q4f16_1-MLC",
+  "Llama-3.1-8B-Instruct-q4f16_1-MLC",
+  "Llama-3.2-3B-Instruct-q4f16_1-MLC"
+];
 
 async function runToolDemo() {
   if (!engine) return;
   
   // Check if current model supports function calling
   const modelId = els.modelSelect.value;
-  const canCall = supportsFunctionCalling(modelId);
+  const supportsFunctionCalling = FUNCTION_CALLING_MODELS.includes(modelId);
   
-  if (!canCall) {
-    const errorMsg = `This model (${modelId}) does not appear to support function calling.\n\n` +
-      `Please switch to a Hermes or Llama 3.x Instruct model.`;
+  if (!supportsFunctionCalling) {
+    const errorMsg = `This model (${modelId}) does not support function calling.\n\n` +
+      `Please switch to one of the following models that support function calling:\n` +
+      FUNCTION_CALLING_MODELS.join('\n');
     addMsg("assistant", errorMsg);
     return;
   }
