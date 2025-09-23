@@ -213,41 +213,89 @@ els.clearBtn.addEventListener("click", () => {
 init();
 
 
+const FUNCTION_CALLING_MODELS = [
+  "Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC",
+  "Hermes-2-Pro-Llama-3-8B-q4f32_1-MLC",
+  "Hermes-2-Pro-Mistral-7B-q4f16_1-MLC",
+  "Hermes-3-Llama-3.1-8B-q4f32_1-MLC",
+  "Hermes-3-Llama-3.1-8B-q4f16_1-MLC"
+];
+
 async function runToolDemo() {
   if (!engine) return;
+  
+  // Check if current model supports function calling
+  const modelId = els.modelSelect.value;
+  const supportsFunctionCalling = FUNCTION_CALLING_MODELS.includes(modelId);
+  
+  if (!supportsFunctionCalling) {
+    const errorMsg = `This model (${modelId}) does not support function calling.\n\n` +
+      `Please switch to one of the following models that support function calling:\n` +
+      FUNCTION_CALLING_MODELS.join('\n');
+    addMsg("assistant", errorMsg);
+    return;
+  }
+
   const q = "What time is it now? If you can, call getTime().";
   addMsg("user", q);
   let bubble = addMsg("assistant", "…");
 
-  if (runtime !== "webgpu") {
-    bubble.textContent = "Tool-calling demo requires WebLLM path.";
-    return;
-  }
-  const webllm = await import(WEBLLM_URL);
-  messages.push({ role: "user", content: q });
   try {
-    const reply = await engine.chat.completions.create({
-      messages,
+    // First, get the model's response which may include a tool call
+    const response = await engine.chat.completions.create({
+      messages: [...messages, { role: "user", content: q }],
       tools,
       tool_choice: "auto",
-      temperature: 0.0,
-      seed: Number(document.getElementById("seed").value || 0),
     });
-    const msg = reply.choices?.[0]?.message;
-    if (msg && msg.tool_calls && msg.tool_calls.length > 0) {
-      const call = msg.tool_calls[0];
-      const toolRes = toolRouter(call.function.name, call.function.arguments ? JSON.parse(call.function.arguments) : {});
-      messages.push({ role: "tool", content: JSON.stringify(toolRes), tool_call_id: call.id || "tool-1" });
-      const final = await engine.chat.completions.create({ messages });
-      const finalText = final.choices?.[0]?.message?.content || "(no content)";
-      bubble.textContent = finalText;
-      messages.push({ role: "assistant", content: finalText });
+
+    const message = response.choices[0]?.message;
+    
+    // Check if the model wants to call a tool
+    if (message.tool_calls && message.tool_calls.length > 0) {
+      const call = message.tool_calls[0];
+      if (call.function.name === "getTime") {
+        // Call the tool
+        const toolResult = toolRouter(call.function.name, call.function.arguments ? JSON.parse(call.function.arguments) : {});
+        
+        // Add the tool response to the messages
+        messages.push({
+          role: "assistant",
+          content: "",
+          tool_calls: [{
+            id: call.id,
+            type: "function",
+            function: {
+              name: call.function.name,
+              arguments: call.function.arguments || ""
+            }
+          }]
+        });
+        
+        messages.push({
+          role: "tool",
+          tool_call_id: call.id,
+          name: call.function.name,
+          content: JSON.stringify(toolResult)
+        });
+        
+        // Get the final response from the model
+        const finalResponse = await engine.chat.completions.create({
+          messages: messages,
+          tools: tools
+        });
+        
+        const finalMessage = finalResponse.choices[0]?.message?.content || "I've checked the time for you.";
+        bubble.textContent = finalMessage;
+        messages.push({ role: "assistant", content: finalMessage });
+      }
     } else {
-      bubble.textContent = msg?.content || "(no tool call; model replied directly)";
-      messages.push({ role: "assistant", content: msg?.content || "" });
+      // If no tool call, just show the model's response
+      const responseText = message?.content || "I couldn't determine the current time.";
+      bubble.textContent = responseText;
+      messages.push({ role: "assistant", content: responseText });
     }
   } catch (e) {
-    bubble.textContent = "Error: " + e.message;
+    console.error("Error in runToolDemo:", e);
+    bubble.textContent = "Error: " + (e.message || "Failed to process request");
   }
 }
-
