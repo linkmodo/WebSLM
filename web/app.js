@@ -1,29 +1,28 @@
 // app.js — WebLLM primary runtime with WebGPU, WASM fallback via wllama
 
-// CDN ESM endpoints (pin versions for stability)
 const WEBLLM_URL = "https://unpkg.com/@mlc-ai/web-llm@0.2.79?module";
 const WLLAMA_URL = "https://unpkg.com/@wllama/wllama@2.3.5/esm/wasm-from-cdn.js?module";
 
 
 const els = {
-  messages: document.getElementById("messages"),
+  form: document.getElementById("form"),
   prompt: document.getElementById("prompt"),
   send: document.getElementById("send"),
   stopBtn: document.getElementById("stop-btn"),
-  form: document.getElementById("chat-form"),
-  fileInput: document.getElementById("file-input"),
-  fileBtn: document.getElementById("file-btn"),
-  filePreview: document.getElementById("file-preview"),
+  messages: document.getElementById("messages"),
+  modelSelect: document.getElementById("model-select"),
+  modelFamilySelect: document.getElementById("model-family-select"),
+  modelSizeSelect: document.getElementById("model-size-select"),
+  quantizationSelect: document.getElementById("quantization-select"),
+  modelDescription: document.getElementById("model-description"),
   initLabel: document.getElementById("init-label"),
   runtimeBadge: document.getElementById("runtime-badge"),
-  settingsDlg: document.getElementById("settings"),
-  settingsBtn: document.getElementById("btn-settings"),
-  closeSettingsBtn: document.getElementById("btn-close-settings"),
-  modelSelect: document.getElementById("model-select"),
-  reloadModelBtn: document.getElementById("btn-reload-model"),
-  clearBtn: document.getElementById("btn-clear"),
+  fileBtn: document.getElementById("file-btn"),
+  fileInput: document.getElementById("file-input"),
+  settingsBtn: document.getElementById("settings-btn"),
+  clearBtn: document.getElementById("clear-btn"),
+  settingsDialog: document.getElementById("settings"),
 };
-
 let engine = null;
 let runtime = "detecting"; // "webgpu" | "wasm"
 let messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
@@ -31,6 +30,170 @@ let currentModel = els.modelSelect.value || "";
 let uploadedFiles = [];
 let isGenerating = false;
 let currentAbortController = null;
+
+// Model data organized by family, size, and quantization
+const modelData = {
+  smollm: {
+    name: "SmolLM",
+    description: "HuggingFace's efficient small models",
+    sizes: {
+      "135M": {
+        name: "135M (Ultra Fast)",
+        description: "Ultra-fast tiny model for basic tasks and low-resource devices",
+        vram: "~360MB",
+        quantizations: {
+          "q0f16": { id: "SmolLM2-135M-Instruct-q0f16-MLC", quality: "100%", speed: "Slower", memory: "High" }
+        }
+      },
+      "360M": {
+        name: "360M (Very Fast)", 
+        description: "Very fast small model for simple Q&A and basic tasks",
+        vram: "~376MB",
+        quantizations: {
+          "q4f16_1": { id: "SmolLM2-360M-Instruct-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "Low" }
+        }
+      },
+      "1.7B": {
+        name: "1.7B (Reasoning)",
+        description: "Efficient small model with good reasoning capabilities", 
+        vram: "~1.8GB",
+        quantizations: {
+          "q4f16_1": { id: "SmolLM2-1.7B-Instruct-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "Low" }
+        }
+      }
+    }
+  },
+  llama: {
+    name: "Llama",
+    description: "Meta's Llama models - Excellent general-purpose performance",
+    sizes: {
+      "1B": {
+        name: "3.2 1B (Efficient)",
+        description: "Meta's latest ultra-compact model with excellent efficiency",
+        vram: "~879MB", 
+        quantizations: {
+          "q4f16_1": { id: "Llama-3.2-1B-Instruct-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "Low" }
+        }
+      },
+      "8B": {
+        name: "3.1 8B (Most Capable)",
+        description: "Meta's powerful model with excellent instruction following",
+        vram: "~4.6GB",
+        quantizations: {
+          "q4f16_1": { id: "Llama-3.1-8B-Instruct-q4f16_1-MLC-1k", quality: "85%", speed: "Fast", memory: "Medium" }
+        }
+      }
+    }
+  },
+  qwen: {
+    name: "Qwen",
+    description: "Alibaba's Qwen models - Strong multilingual capabilities",
+    sizes: {
+      "0.5B": {
+        name: "2.5 0.5B (Quick)",
+        description: "Tiny but capable model for quick responses",
+        vram: "~945MB",
+        quantizations: {
+          "q4f16_1": { id: "Qwen2.5-0.5B-Instruct-q4f16_1-MLC", quality: "85%", speed: "Very Fast", memory: "Low" }
+        }
+      },
+      "1.5B": {
+        name: "2.5 1.5B (Balanced)",
+        description: "Balanced small model with good performance",
+        vram: "~1.6GB",
+        quantizations: {
+          "q4f16_1": { id: "Qwen2.5-1.5B-Instruct-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "Low" }
+        }
+      },
+      "3B": {
+        name: "2.5 3B (Capable)",
+        description: "Mid-size model with excellent capabilities",
+        vram: "~2.5GB",
+        quantizations: {
+          "q4f16_1": { id: "Qwen2.5-3B-Instruct-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "Medium" }
+        }
+      }
+    }
+  },
+  mistral: {
+    name: "Mistral",
+    description: "Mistral AI's models - Excellent balance of performance and efficiency",
+    sizes: {
+      "7B": {
+        name: "7B v0.3 (Recommended)",
+        description: "Strong performance in reasoning and instruction following",
+        vram: "~4.6GB",
+        quantizations: {
+          "q4f16_1": { id: "Mistral-7B-Instruct-v0.3-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "Medium" }
+        }
+      }
+    }
+  },
+  phi: {
+    name: "Phi",
+    description: "Microsoft's Phi models - Optimized for reasoning and coding",
+    sizes: {
+      "3.5B": {
+        name: "3.5 Mini (Microsoft)",
+        description: "Latest small model with excellent reasoning and coding capabilities",
+        vram: "~2.5GB",
+        quantizations: {
+          "q4f16_1": { id: "Phi-3.5-mini-instruct-q4f16_1-MLC-1k", quality: "85%", speed: "Fast", memory: "Medium" }
+        }
+      }
+    }
+  },
+  gemma: {
+    name: "Gemma",
+    description: "Google's Gemma models - Research-grade performance",
+    sizes: {
+      "2B": {
+        name: "2 2B (Google)",
+        description: "Google's latest efficient model with strong performance",
+        vram: "~1.6GB",
+        quantizations: {
+          "q4f16_1": { id: "gemma-2-2b-it-q4f16_1-MLC-1k", quality: "85%", speed: "Fast", memory: "Low" }
+        }
+      }
+    }
+  },
+  hermes: {
+    name: "Hermes",
+    description: "NousResearch's Hermes models - Advanced function calling",
+    sizes: {
+      "8B-Pro": {
+        name: "2 Pro (Function Calling)",
+        description: "Fine-tuned Llama 3 with function calling support",
+        vram: "~5GB",
+        quantizations: {
+          "q4f16_1": { id: "Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "High" }
+        }
+      },
+      "8B-v3": {
+        name: "3 (Advanced)",
+        description: "Latest Hermes model with advanced capabilities",
+        vram: "~4.9GB",
+        quantizations: {
+          "q4f16_1": { id: "Hermes-3-Llama-3.1-8B-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "High" }
+        }
+      }
+    }
+  },
+  stablelm: {
+    name: "StableLM",
+    description: "Stability AI's chat-optimized models",
+    sizes: {
+      "1.6B": {
+        name: "Zephyr 1.6B",
+        description: "Chat-optimized model with 1K context",
+        vram: "~1.5GB",
+        quantizations: {
+          "q4f16_1": { id: "stablelm-2-zephyr-1_6b-q4f16_1-MLC-1k", quality: "85%", speed: "Fast", memory: "Low" }
+        }
+      }
+    }
+  }
+};
 
 // --- UI helpers ---
 function addMsg(who, text) {
@@ -144,6 +307,98 @@ function formatMarkdown(text) {
   formatted = formatted.replace(/<\/ul><ul>/g, '');
   
   return formatted;
+}
+
+// Model selection functions
+function updateModelSizes() {
+  const family = els.modelFamilySelect.value;
+  const sizeSelect = els.modelSizeSelect;
+  const quantSelect = els.quantizationSelect;
+  
+  // Clear and disable dependent selects
+  sizeSelect.innerHTML = '<option value="">-- Select Model Size --</option>';
+  quantSelect.innerHTML = '<option value="">-- Select Size First --</option>';
+  sizeSelect.disabled = !family;
+  quantSelect.disabled = true;
+  
+  if (family && modelData[family]) {
+    sizeSelect.disabled = false;
+    Object.keys(modelData[family].sizes).forEach(sizeKey => {
+      const size = modelData[family].sizes[sizeKey];
+      const option = document.createElement('option');
+      option.value = sizeKey;
+      option.textContent = size.name;
+      option.dataset.desc = `${size.description} (${size.vram} VRAM)`;
+      sizeSelect.appendChild(option);
+    });
+  }
+  
+  updateModelDescription();
+}
+
+function updateQuantizations() {
+  const family = els.modelFamilySelect.value;
+  const size = els.modelSizeSelect.value;
+  const quantSelect = els.quantizationSelect;
+  
+  quantSelect.innerHTML = '<option value="">-- Select Quantization --</option>';
+  quantSelect.disabled = true;
+  
+  if (family && size && modelData[family]?.sizes[size]) {
+    quantSelect.disabled = false;
+    const quantizations = modelData[family].sizes[size].quantizations;
+    
+    Object.keys(quantizations).forEach(quantKey => {
+      const quant = quantizations[quantKey];
+      const option = document.createElement('option');
+      option.value = quantKey;
+      option.textContent = `${quantKey.toUpperCase()} - ${quant.quality} Quality (${quant.speed}, ${quant.memory} Memory)`;
+      option.dataset.desc = `Quality: ${quant.quality}, Speed: ${quant.speed}, Memory Usage: ${quant.memory}`;
+      quantSelect.appendChild(option);
+    });
+  }
+  
+  updateModelDescription();
+  updateFinalModelSelection();
+}
+
+function updateModelDescription() {
+  const family = els.modelFamilySelect.value;
+  const size = els.modelSizeSelect.value;
+  const quant = els.quantizationSelect.value;
+  
+  let description = "Select a model to see details";
+  
+  if (family && modelData[family]) {
+    description = `<strong>${modelData[family].name}:</strong> ${modelData[family].description}`;
+    
+    if (size && modelData[family].sizes[size]) {
+      const sizeData = modelData[family].sizes[size];
+      description += `<br><strong>${sizeData.name}:</strong> ${sizeData.description} (${sizeData.vram} VRAM)`;
+      
+      if (quant && sizeData.quantizations[quant]) {
+        const quantData = sizeData.quantizations[quant];
+        description += `<br><strong>Quantization:</strong> ${quant.toUpperCase()} - ${quantData.quality} quality, ${quantData.speed} speed, ${quantData.memory} memory usage`;
+      }
+    }
+  }
+  
+  els.modelDescription.innerHTML = description;
+}
+
+function updateFinalModelSelection() {
+  const family = els.modelFamilySelect.value;
+  const size = els.modelSizeSelect.value;
+  const quant = els.quantizationSelect.value;
+  
+  if (family && size && quant && modelData[family]?.sizes[size]?.quantizations[quant]) {
+    const modelId = modelData[family].sizes[size].quantizations[quant].id;
+    els.modelSelect.value = modelId;
+    currentModel = modelId;
+  } else {
+    els.modelSelect.value = "";
+    currentModel = "";
+  }
 }
 
 function setGeneratingState(generating) {
@@ -846,15 +1101,16 @@ function updateChatInterface(enabled) {
 // Initially disable chat interface
 updateChatInterface(false);
 
-// Update model description when selection changes
-function updateModelDescription() {
-  const selectedOption = els.modelSelect.options[els.modelSelect.selectedIndex];
-  const description = selectedOption.getAttribute('data-desc') || 'No description available.';
-  document.getElementById('model-description').textContent = description;
-}
-
 // Initialize model description
 updateModelDescription();
+
+// Add event listeners for cascading model selection
+els.modelFamilySelect.addEventListener('change', updateModelSizes);
+els.modelSizeSelect.addEventListener('change', updateQuantizations);
+els.quantizationSelect.addEventListener('change', () => {
+  updateModelDescription();
+  updateFinalModelSelection();
+});
 
 // Add event listener for model selection changes
 els.modelSelect.addEventListener('change', updateModelDescription);
