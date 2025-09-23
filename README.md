@@ -7,19 +7,21 @@
 Run an LLM **entirely in the browser**. Primary path uses **WebLLM + WebGPU**. If WebGPU isn't available, we **fallback to WASM** via **wllama** (no server, no keys).
 
 ## Features
+- **Model selection dialog** with descriptions; dialog is centered and has a dark backdrop for readability
 - OpenAI-compatible **WebLLM** with **streaming** output
-- **Function calling** demo (local JS function)
+- Optional **function calling** support (for select models like Hermes and Llama 3.x)
+- **File upload** support (button and drag‑and‑drop) for text/code/docs/images; files can be attached to prompts
 - **Service Worker** caching (static assets + model shards for repeat loads)
 - **PWA** packaging (installable, offline-first UX)
 - **WASM fallback** using **wllama** (single-thread by default to avoid COOP/COEP headers)
+- Runtime‑aware **Reload model** button (enabled only on WebGPU/WebLLM)
 
 ## Installation & Running
 
 ### Clone and Setup
 ```bash
-git clone https://github.com/fenago/drleewebslm
-git remote remove origin
-cd drleewebslm
+git clone https://github.com/linkmodo/WebSLM.git
+cd WebSLM
 npx http-server web -p 8000
 ```
 
@@ -33,21 +35,20 @@ npx http-server web -p 8000
 ## Folder Map
 ```
 /web
-  index.html           # UI, registers SW, loads app.js
-  app.js               # WebLLM logic + fallback orchestrator
+  index.html            # UI, registers SW, loads app.js
+  app.js                # WebLLM logic + runtime/fallback orchestrator
   styles.css
-  sw.js                # Service worker: caches app + model shards
-  manifest.json        # PWA manifest
-/fallback
-  wllama.js            # WASM fallback using @wllama/wllama CDN
+  sw.js                 # Service worker: caches app + model shards
+  manifest.json         # PWA manifest
+  /fallback
+    wllama.js           # WASM fallback using @wllama/wllama CDN
+  /public
+    logo.png            # App logo used in header
 /tools
-  quantize.py          # Notes & helper scaffold for GGUF prep (optional)
+  quantize.py           # Notes & helper scaffold for GGUF prep (optional)
 /docs
-  pwa.md               # PWA/offline notes
-  models.md            # Model choices, tradeoffs
-/public
-  icon-192.png         # Placeholder PWA icons
-  icon-512.png
+  pwa.md                # PWA/offline notes
+  models.md             # Model choices, tradeoffs
 ```
 
 ## Browser Support
@@ -59,10 +60,10 @@ npx http-server web -p 8000
 ### Deploy to Netlify
 
 #### Method 1: Deploy from GitHub (Recommended)
-1. Push your code to GitHub (e.g., `https://github.com/fenago/DrleeWebSLM`) - obviously use your own repo
+1. Push your code to GitHub (e.g., `https://github.com/linkmodo/WebSLM`) - obviously use your own repo
 2. Log into Netlify (https://app.netlify.com)
 3. Click **"Add new site"** → **"Import an existing project"**
-4. Connect to GitHub and select your repository (`fenago/DrleeWebSLM`)
+4. Connect to GitHub and select your repository (`linkmodo/WebSLM`)
 5. Configure build settings:
    - **Base directory**: Leave blank
    - **Build command**: Leave blank (no build needed)
@@ -92,11 +93,27 @@ npx http-server web -p 8000
 - **WebGPU API** - For GPU acceleration (primary runtime)
 - **WebAssembly (WASM)** - Fallback runtime when WebGPU unavailable
 
-### Models Supported
-- TinyLlama 1.1B Chat
-- Phi-2
-- Mistral 7B Instruct
-- Llama 3.1 8B Instruct
+### Model Selection and Supported IDs
+Select models from the Settings dialog. First load will download model shards (cached afterwards).
+
+Pre-populated options (WebLLM prebuilt, with correct `-MLC` IDs):
+- `TinyLlama-1.1B-Chat-v0.4-q4f16_1-MLC` — fastest, small Q&A
+- `Phi-2-q4f16_1-MLC` — strong reasoning for its size
+- `Phi-3-mini-4k-instruct-q4f16_1-MLC` — efficient, modern
+- `Mistral-7B-Instruct-v0.3-q4f16_1-MLC` — recommended general use
+- `Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC` — capable, supports function calling
+- `Llama-3.2-3B-Instruct-q4f16_1-MLC` — compact, latest small
+- `Llama-3.1-8B-Instruct-q4f16_1-MLC` — strong instruction following
+- `DeepSeek-Coder-1.3B-Instruct-q4f16_1-MLC` — coding‑optimized
+- `gemma-2b-it-q4f16_1-MLC` — efficient Google model
+
+Function calling is supported by select models (e.g., Hermes 2 Pro, Llama 3.x instruct). Demo buttons were removed from UI for simplicity, but function calling can still be invoked programmatically.
+
+### File Uploads (Attach Context)
+- Click the paperclip button or drag & drop files into the chat area
+- Supported types: text/code (`.txt`, `.md`, `.json`, `.csv`, `.xml`, `.html`, `.js`, `.ts`, `.jsx`, `.tsx`, `.vue`, `.py`, `.cpp`, `.c`, `.java`, `.php`, `.rb`, `.go`, `.rs`, `.sh`, `.yml`, `.yaml`), docs (`.pdf`, `.docx`, `.doc`, `.rtf`, `.odt`), images (`.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.webp`, `.svg`)
+- Text/code contents are inlined into the prompt; PDFs are attached with a note; images are passed as data URLs (model capabilities vary)
+- Remove attachments before sending using the × button in the preview
 
 ### Progressive Web App (PWA)
 - **Service Worker** (`sw.js`) - For offline functionality
@@ -113,11 +130,11 @@ npx http-server web -p 8000
 - No API keys required
 - No server dependencies
 - WebGPU with WASM fallback
-- Function calling support
+- Optional function calling support (for supported models)
 - Persistent settings via localStorage
+- File upload and drag‑and‑drop for context
 
 ## Credits
 - WebLLM by the MLC team
 - wllama by @ngxson (WASM binding for llama.cpp)
 - Original Script by Dr. Ernesto Lee / LVNG.ai
-- Updated by Linkmodo
