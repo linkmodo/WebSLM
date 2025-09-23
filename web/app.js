@@ -44,7 +44,7 @@ function addMsg(who, text) {
   
   // Format text with basic markdown support for assistant messages
   if (who === "assistant") {
-    bubble.innerHTML = formatMarkdown(text);
+    bubble.innerHTML = formatText(text);
   } else {
     bubble.textContent = text;
   }
@@ -55,40 +55,117 @@ function addMsg(who, text) {
   return bubble;
 }
 
-function formatMarkdown(text) {
-  // Basic markdown formatting
+// Simpler text formatting that focuses on line breaks and basic formatting
+function formatText(text) {
+  if (!text) return '';
+  
+  // Escape HTML to prevent XSS
   let formatted = text
-    // Code blocks
-    .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // Bold
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    // Headers
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // Lists
-    .replace(/^\* (.+)$/gm, '<li>$1</li>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    // Line breaks
-    .replace(/\n/g, '<br>');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  
+  // Handle code blocks first
+  formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+  
+  // Handle inline code
+  formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+  
+  // Handle bold and italic
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  
+  // Convert double newlines to paragraph breaks
+  formatted = formatted.replace(/\n\s*\n/g, '</p><p>');
+  
+  // Convert single newlines to line breaks
+  formatted = formatted.replace(/\n/g, '<br>');
+  
+  // Wrap in paragraph tags
+  formatted = '<p>' + formatted + '</p>';
+  
+  // Clean up empty paragraphs
+  formatted = formatted.replace(/<p><\/p>/g, '');
+  formatted = formatted.replace(/<p>\s*<\/p>/g, '');
+  
+  return formatted;
+}
+
+function formatMarkdown(text) {
+  if (!text) return '';
+  
+  // Escape HTML first to prevent XSS, but preserve our markdown
+  let formatted = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  
+  // Code blocks (must be processed before inline code)
+  formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>');
+  
+  // Inline code
+  formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+  
+  // Bold and italic
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  
+  // Headers (with proper line breaks)
+  formatted = formatted.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  formatted = formatted.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  formatted = formatted.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  
+  // Lists
+  formatted = formatted.replace(/^\* (.+)$/gm, '<li>$1</li>');
+  formatted = formatted.replace(/^- (.+)$/gm, '<li>$1</li>');
+  formatted = formatted.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  
+  // Convert double line breaks to paragraphs
+  formatted = formatted.replace(/\n\n+/g, '</p><p>');
+  
+  // Convert single line breaks to <br>
+  formatted = formatted.replace(/\n/g, '<br>');
+  
+  // Wrap in paragraph tags if not already wrapped
+  if (!formatted.startsWith('<') && formatted.trim()) {
+    formatted = '<p>' + formatted + '</p>';
+  }
+  
+  // Clean up empty paragraphs
+  formatted = formatted.replace(/<p><\/p>/g, '');
+  formatted = formatted.replace(/<p><br><\/p>/g, '');
   
   // Wrap consecutive list items in ul tags
-  formatted = formatted.replace(/(<li>.*<\/li>)(<br>)*(<li>.*<\/li>)/g, '<ul>$1$3</ul>');
+  formatted = formatted.replace(/(<li>.*?<\/li>)(<br>)*(<li>.*?<\/li>)/g, '<ul>$1$3</ul>');
   formatted = formatted.replace(/(<\/li>)<br>(<li>)/g, '$1$2');
+  
+  // Fix multiple consecutive ul tags
+  formatted = formatted.replace(/<\/ul><br><ul>/g, '');
+  formatted = formatted.replace(/<\/ul><ul>/g, '');
   
   return formatted;
 }
 
 function setGeneratingState(generating) {
   isGenerating = generating;
-  els.send.style.display = generating ? 'none' : 'inline-block';
-  els.stopBtn.style.display = generating ? 'inline-block' : 'none';
-  els.prompt.disabled = generating;
-  els.fileBtn.disabled = generating;
+  
+  if (!els.stopBtn) {
+    console.error('Stop button element not found!');
+    return;
+  }
+  
+  if (generating) {
+    els.send.style.display = 'none';
+    els.stopBtn.style.display = 'inline-block';
+    els.stopBtn.style.visibility = 'visible';
+    els.prompt.disabled = true;
+    els.fileBtn.disabled = true;
+  } else {
+    els.send.style.display = 'inline-block';
+    els.stopBtn.style.display = 'none';
+    els.prompt.disabled = false;
+    els.fileBtn.disabled = false;
+  }
 }
 function setBadge(txt, ok = true) {
   els.runtimeBadge.textContent = txt;
@@ -585,8 +662,8 @@ async function handleSend(prompt) {
         const delta = ch.choices?.[0]?.delta?.content || "";
         acc += delta;
         
-        // Update with formatted markdown in real-time
-        bubble.innerHTML = formatMarkdown(acc);
+        // Update with formatted text in real-time
+        bubble.innerHTML = formatText(acc);
         
         // Scroll to bottom as content updates
         els.messages.scrollTop = els.messages.scrollHeight;
@@ -594,34 +671,34 @@ async function handleSend(prompt) {
       
       if (isInterrupted) {
         acc += "\n\n[Generation stopped by user]";
-        bubble.innerHTML = formatMarkdown(acc);
+        bubble.innerHTML = formatText(acc);
       }
       
       messages.push({ role: "assistant", content: acc });
     } catch (e) {
       if (e.name === 'AbortError' || currentAbortController.signal.aborted) {
-        bubble.innerHTML = formatMarkdown(bubble.textContent + "\n\n[Generation stopped by user]");
+        bubble.innerHTML = formatText(bubble.textContent + "\n\n[Generation stopped by user]");
       } else {
-        bubble.innerHTML = formatMarkdown("Error: " + e.message);
+        bubble.innerHTML = formatText("Error: " + e.message);
         console.error(e);
       }
     }
 } else {
   try {
-    bubble.innerHTML = formatMarkdown("Thinking (WASM)…");
+    bubble.innerHTML = formatText("Thinking (WASM)…");
     
     // For WASM, we can't easily interrupt, but we can at least show the state
     const out = await engine.complete(fullPrompt, { nPredict: 128, temp: 0.7 });
     
     if (currentAbortController.signal.aborted) {
-      bubble.innerHTML = formatMarkdown((out || "") + "\n\n[Generation stopped by user]");
+      bubble.innerHTML = formatText((out || "") + "\n\n[Generation stopped by user]");
     } else {
-      bubble.innerHTML = formatMarkdown(out || "(no output)");
+      bubble.innerHTML = formatText(out || "(no output)");
     }
     
     messages.push({ role: "assistant", content: out || "" });
   } catch (e) {
-    bubble.innerHTML = formatMarkdown("Error: " + e.message);
+    bubble.innerHTML = formatText("Error: " + e.message);
     console.error(e);
   }
 }
