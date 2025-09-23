@@ -316,8 +316,11 @@ async function init() {
               }
               for (const m of list) {
                 const opt = document.createElement("option");
-                opt.value = m.model_id;
-                opt.textContent = m.model_id;
+                opt.value = m.model_id; // keep exact id for WebLLM
+                // produce a readable label but preserve id in value
+                const friendly = makeModelDescription(m.model_id);
+                opt.textContent = friendly;
+                opt.setAttribute('data-desc', friendly);
                 els.modelSelect.appendChild(opt);
               }
               // Select the first model by default if none selected
@@ -608,27 +611,26 @@ if (els.settingsDlg) {
 }
 
 
-const FUNCTION_CALLING_MODELS = [
-  "Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC",
-  "Hermes-2-Pro-Llama-3-8B-q4f32_1-MLC",
-  "Hermes-2-Pro-Mistral-7B-q4f16_1-MLC",
-  "Hermes-3-Llama-3.1-8B-q4f32_1-MLC",
-  "Hermes-3-Llama-3.1-8B-q4f16_1-MLC",
-  "Llama-3.1-8B-Instruct-q4f16_1-MLC",
-  "Llama-3.2-3B-Instruct-q4f16_1-MLC"
-];
+function supportsFunctionCalling(modelId) {
+  if (!modelId) return false;
+  const id = modelId.toLowerCase();
+  // Heuristics: Hermes 2/3, Llama 3.x Instruct models often have tool calling
+  if (id.includes('hermes')) return true;
+  if (/llama-3\.[12].*instruct/.test(id)) return true;
+  // Extend as needed for other families
+  return false;
+}
 
 async function runToolDemo() {
   if (!engine) return;
   
   // Check if current model supports function calling
   const modelId = els.modelSelect.value;
-  const supportsFunctionCalling = FUNCTION_CALLING_MODELS.includes(modelId);
+  const canCall = supportsFunctionCalling(modelId);
   
-  if (!supportsFunctionCalling) {
-    const errorMsg = `This model (${modelId}) does not support function calling.\n\n` +
-      `Please switch to one of the following models that support function calling:\n` +
-      FUNCTION_CALLING_MODELS.join('\n');
+  if (!canCall) {
+    const errorMsg = `This model (${modelId}) does not appear to support function calling.\n\n` +
+      `Please switch to a Hermes or Llama 3.x Instruct model.`;
     addMsg("assistant", errorMsg);
     return;
   }
