@@ -67,11 +67,16 @@ header {
   background: rgba(255, 255, 255, 0.9);
   border: none;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 18px;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .actions button:hover {
