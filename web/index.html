@@ -46,37 +46,27 @@
     <dialog id="settings">
       <form method="dialog" class="settings">
         <h3>Settings</h3>
-        <div class="model-selection">
-          <label title="Select the base AI model family. Each family has different capabilities and specializations.">Model Family
-            <select id="model-family-select">
-              <option value="" data-desc="Please select a model family to get started.">-- Select Model Family --</option>
-              <option value="smollm" data-desc="HuggingFace's efficient small models - Great for basic tasks with minimal resource usage">SmolLM (Ultra Efficient)</option>
-              <option value="llama" data-desc="Meta's Llama models - Excellent general-purpose performance and instruction following">Llama (Meta)</option>
-              <option value="qwen" data-desc="Alibaba's Qwen models - Strong multilingual capabilities and reasoning">Qwen (Alibaba)</option>
-              <option value="mistral" data-desc="Mistral AI's models - Excellent balance of performance and efficiency">Mistral AI</option>
-              <option value="phi" data-desc="Microsoft's Phi models - Optimized for reasoning and coding tasks">Phi (Microsoft)</option>
-              <option value="gemma" data-desc="Google's Gemma models - Research-grade performance with good efficiency">Gemma (Google)</option>
-              <option value="hermes" data-desc="NousResearch's Hermes models - Advanced function calling and complex reasoning">Hermes (Advanced)</option>
-              <option value="stablelm" data-desc="Stability AI's chat-optimized models">StableLM (Stability AI)</option>
-              <option value="deepseek" data-desc="DeepSeek's advanced reasoning models with R1 distillation technology">DeepSeek (Reasoning)</option>
-            </select>
-          </label>
-
-          <label title="Select the specific model size. Larger models are more capable but require more resources.">Model Size
-            <select id="model-size-select" disabled>
-              <option value="">-- Select Family First --</option>
-            </select>
-          </label>
-
-          <label title="Choose quantization level. Lower precision = faster/smaller, higher precision = better quality.">Quantization Level
-            <select id="quantization-select" disabled>
-              <option value="">-- Select Model First --</option>
-            </select>
-          </label>
-        </div>
-
-        <!-- Hidden select for compatibility -->
-        <select id="model-select" style="display: none;">
+        <label title="Select the AI model to use. Larger models are more capable but require more resources.">Model (WebLLM)
+          <select id="model-select">
+            <option value="" data-desc="Please select a model to get started. Models will be downloaded on first use.">-- Select a Model --</option>
+            <!-- Ultra Small Models (< 1B) -->
+            <option value="SmolLM2-135M-Instruct-q0f16-MLC" data-desc="SmolLM2 135M (135M parameters) - Ultra-fast tiny model for basic tasks and low-resource devices. Minimal VRAM usage (~360MB).">SmolLM2 135M (Ultra Fast)</option>
+            <option value="SmolLM2-360M-Instruct-q4f16_1-MLC" data-desc="SmolLM2 360M (360M parameters) - Very fast small model for simple Q&A and basic tasks. Low VRAM usage (~376MB).">SmolLM2 360M (Very Fast)</option>
+            <!-- Small Models (1-2B) -->
+            <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC" data-desc="Llama 3.2 1B (1B parameters) - Meta's latest ultra-compact model with excellent efficiency. Good for basic tasks (~879MB VRAM).">Llama 3.2 1B (Efficient)</option>
+            <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 0.5B (0.5B parameters) - Alibaba's tiny but capable model. Excellent for quick responses (~945MB VRAM).">Qwen2.5 0.5B (Quick)</option>
+            <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 1.5B (1.5B parameters) - Balanced small model with good performance for its size (~1.6GB VRAM).">Qwen2.5 1.5B (Balanced)</option>
+            <option value="SmolLM2-1.7B-Instruct-q4f16_1-MLC" data-desc="SmolLM2 1.7B (1.7B parameters) - HuggingFace's efficient small model with good reasoning capabilities (~1.8GB VRAM).">SmolLM2 1.7B (Reasoning)</option>
+            <option value="stablelm-2-zephyr-1_6b-q4f16_1-MLC-1k" data-desc="StableLM Zephyr 1.6B (1.6B parameters) - Stability AI's chat-optimized model with 1K context (~1.5GB VRAM).">StableLM Zephyr 1.6B</option>
+            <!-- Medium Models (2-4B) -->
+            <option value="gemma-2-2b-it-q4f16_1-MLC-1k" data-desc="Gemma 2 2B (2B parameters) - Google's latest efficient model with strong performance (~1.6GB VRAM, 1K context).">Gemma 2 2B (Google)</option>
+            <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 3B (3B parameters) - Alibaba's mid-size model with excellent capabilities (~2.5GB VRAM).">Qwen2.5 3B (Capable)</option>
+            <option value="Phi-3.5-mini-instruct-q4f16_1-MLC-1k" data-desc="Phi-3.5 Mini (3.8B parameters) - Microsoft's latest small model with excellent reasoning and coding capabilities (~2.5GB VRAM, 1K context).">Phi-3.5 Mini (Microsoft)</option>
+            <!-- Large Models (7-8B) -->
+            <option value="Mistral-7B-Instruct-v0.3-q4f16_1-MLC" data-desc="Mistral 7B v0.3 (7B parameters) - Strong performance in reasoning and instruction following. Good balance of capability and speed (~4.6GB VRAM).">Mistral 7B v0.3 (Recommended)</option>
+            <option value="Llama-3.1-8B-Instruct-q4f16_1-MLC-1k" data-desc="Llama 3.1 8B (8B parameters) - Meta's powerful model with excellent instruction following (~4.6GB VRAM, 1K context).">Llama 3.1 8B (Most Capable)</option>
+            <option value="Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC" data-desc="Hermes 2 Pro (8B parameters) - Fine-tuned Llama 3 with function calling support. Excellent for complex tasks (~5GB VRAM).">Hermes 2 Pro (Function Calling)</option>
+            <option value="Hermes-3-Llama-3.1-8B-q4f16_1-MLC" data-desc="Hermes 3 (8B parameters) - Latest Hermes model with advanced capabilities and function calling (~4.9GB VRAM).">Hermes 3 (Advanced)</option>
             <!-- Specialized Models -->
             <option value="Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 Coder 1.5B (1.5B parameters) - Specialized for coding tasks with excellent programming capabilities (~1.6GB VRAM).">Qwen2.5 Coder 1.5B (Coding)</option>
             <option value="Qwen2.5-Coder-3B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 Coder 3B (3B parameters) - Advanced coding model with strong programming and debugging skills (~2.5GB VRAM).">Qwen2.5 Coder 3B (Advanced Coding)</option>
@@ -105,7 +95,7 @@
     </dialog>
   </div>
 
-  <script type="module" src="./app.js?v=20250923-2140"></script>
+  <script type="module" src="./app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
