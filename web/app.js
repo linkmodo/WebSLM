@@ -366,6 +366,7 @@ function updateModelSizes() {
   }
   
   updateModelDescription();
+  // Don't call updateFinalModelSelection here since quantization isn't selected yet
 }
 
 function updateQuantizations() {
@@ -390,10 +391,18 @@ function updateQuantizations() {
       option.dataset.desc = `Quality: ${quant.quality}, Speed: ${quant.speed}, Memory Usage: ${quant.memory}`;
       quantSelect.appendChild(option);
     });
+    
+    // Auto-select the first (and often only) quantization option
+    if (Object.keys(quantizations).length === 1) {
+      quantSelect.value = Object.keys(quantizations)[0];
+    }
   }
   
   updateModelDescription();
-  updateFinalModelSelection();
+  // Only update final selection if quantization is actually selected
+  if (quantSelect.value) {
+    updateFinalModelSelection();
+  }
 }
 
 function updateModelDescription() {
@@ -980,6 +989,7 @@ function setupEventListeners() {
   els.modelFamilySelect?.addEventListener('change', updateModelSizes);
   els.modelSizeSelect?.addEventListener('change', updateQuantizations);
   els.quantizationSelect?.addEventListener('change', () => {
+    console.log('🎯 Quantization changed to:', els.quantizationSelect.value);
     updateModelDescription();
     updateFinalModelSelection();
   });
