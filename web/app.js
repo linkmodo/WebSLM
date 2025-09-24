@@ -423,17 +423,24 @@ function updateModelDescription() {
 }
 
 function updateFinalModelSelection() {
-  if (!els.modelFamilySelect || !els.modelSizeSelect || !els.quantizationSelect || !els.modelSelect) return;
+  if (!els.modelFamilySelect || !els.modelSizeSelect || !els.quantizationSelect || !els.modelSelect) {
+    console.log('⚠️ updateFinalModelSelection: Missing elements');
+    return;
+  }
   
   const family = els.modelFamilySelect.value;
   const size = els.modelSizeSelect.value;
   const quant = els.quantizationSelect.value;
   
+  console.log('🔄 updateFinalModelSelection:', { family, size, quant });
+  
   if (family && size && quant && modelData[family]?.sizes[size]?.quantizations[quant]) {
     const modelId = modelData[family].sizes[size].quantizations[quant].id;
+    console.log('✅ Setting model ID:', modelId);
     els.modelSelect.value = modelId;
     currentModel = modelId;
   } else {
+    console.log('❌ Invalid selection, clearing model');
     els.modelSelect.value = "";
     currentModel = "";
   }
@@ -940,8 +947,14 @@ function setupEventListeners() {
   });
 
   // Settings
-  els.settingsBtn?.addEventListener("click", () => els.settingsDialog.showModal());
-  els.closeSettingsBtn?.addEventListener("click", () => els.settingsDialog.close());
+  els.settingsBtn?.addEventListener("click", () => {
+    console.log('⚙️ Opening settings dialog');
+    els.settingsDialog.showModal();
+  });
+  els.closeSettingsBtn?.addEventListener("click", () => {
+    console.log('❌ Close button clicked');
+    els.settingsDialog.close();
+  });
 
   // Model management
   els.reloadModelBtn?.addEventListener("click", async (e) => {
@@ -977,13 +990,23 @@ function setupEventListeners() {
   // Settings dialog close
   els.settingsDialog?.addEventListener('close', async () => {
     const selectedModel = els.modelSelect.value;
+    console.log('🔍 Settings dialog closed. Selected model:', selectedModel);
+    console.log('🔍 Current model:', currentModel);
+    console.log('🔍 Model family:', els.modelFamilySelect?.value);
+    console.log('🔍 Model size:', els.modelSizeSelect?.value);
+    console.log('🔍 Quantization:', els.quantizationSelect?.value);
+    
     if (selectedModel && selectedModel !== currentModel) {
+      console.log('✅ Starting model initialization:', selectedModel);
       currentModel = selectedModel;
       await init();
     } else if (!selectedModel) {
+      console.log('❌ No model selected');
       currentModel = "";
       addMsg("assistant", "Please select a model from the Settings menu to get started.");
       updateChatInterface(false);
+    } else {
+      console.log('ℹ️ Same model already loaded:', selectedModel);
     }
   });
 }
