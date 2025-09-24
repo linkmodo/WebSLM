@@ -1,32 +1,16 @@
 // app.js — WebLLM primary runtime with WebGPU, WASM fallback via wllama
 
 const WEBLLM_URL = "https://unpkg.com/@mlc-ai/web-llm@0.2.79?module";
-const WLLAMA_URL = "https://unpkg.com/@wllama/wllama@2.3.5/esm/wasm-from-cdn.js?module";
+// Use jsDelivr as primary CDN to avoid CORS issues with unpkg
+const WLLAMA_URL = "https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.5/esm/wasm-from-cdn.js";
+// Backup: "https://unpkg.com/@wllama/wllama@2.3.5/esm/wasm-from-cdn.js?module"
 
 
-const els = {
-  form: document.getElementById("form"),
-  prompt: document.getElementById("prompt"),
-  send: document.getElementById("send"),
-  stopBtn: document.getElementById("stop-btn"),
-  messages: document.getElementById("messages"),
-  modelSelect: document.getElementById("model-select"),
-  modelFamilySelect: document.getElementById("model-family-select"),
-  modelSizeSelect: document.getElementById("model-size-select"),
-  quantizationSelect: document.getElementById("quantization-select"),
-  modelDescription: document.getElementById("model-description"),
-  initLabel: document.getElementById("init-label"),
-  runtimeBadge: document.getElementById("runtime-badge"),
-  fileBtn: document.getElementById("file-btn"),
-  fileInput: document.getElementById("file-input"),
-  settingsBtn: document.getElementById("settings-btn"),
-  clearBtn: document.getElementById("clear-btn"),
-  settingsDialog: document.getElementById("settings"),
-};
+let els = {};
 let engine = null;
 let runtime = "detecting"; // "webgpu" | "wasm"
 let messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
-let currentModel = els.modelSelect.value || "";
+let currentModel = "";
 let uploadedFiles = [];
 let isGenerating = false;
 let currentAbortController = null;
@@ -311,6 +295,8 @@ function formatMarkdown(text) {
 
 // Model selection functions
 function updateModelSizes() {
+  if (!els.modelFamilySelect || !els.modelSizeSelect || !els.quantizationSelect) return;
+  
   const family = els.modelFamilySelect.value;
   const sizeSelect = els.modelSizeSelect;
   const quantSelect = els.quantizationSelect;
@@ -337,6 +323,8 @@ function updateModelSizes() {
 }
 
 function updateQuantizations() {
+  if (!els.modelFamilySelect || !els.modelSizeSelect || !els.quantizationSelect) return;
+  
   const family = els.modelFamilySelect.value;
   const size = els.modelSizeSelect.value;
   const quantSelect = els.quantizationSelect;
@@ -363,9 +351,11 @@ function updateQuantizations() {
 }
 
 function updateModelDescription() {
-  const family = els.modelFamilySelect.value;
-  const size = els.modelSizeSelect.value;
-  const quant = els.quantizationSelect.value;
+  if (!els.modelDescription) return;
+  
+  const family = els.modelFamilySelect?.value;
+  const size = els.modelSizeSelect?.value;
+  const quant = els.quantizationSelect?.value;
   
   let description = "Select a model to see details";
   
@@ -387,6 +377,8 @@ function updateModelDescription() {
 }
 
 function updateFinalModelSelection() {
+  if (!els.modelFamilySelect || !els.modelSizeSelect || !els.quantizationSelect || !els.modelSelect) return;
+  
   const family = els.modelFamilySelect.value;
   const size = els.modelSizeSelect.value;
   const quant = els.quantizationSelect.value;
@@ -820,12 +812,208 @@ async function init() {
   }
 }
 
-// Initialize the application when the page loads
-window.addEventListener('load', () => {
+// Initialize elements and event listeners
+function initializeApp() {
+  // Initialize element references
+  els = {
+    form: document.getElementById("chat-form"),
+    prompt: document.getElementById("prompt"),
+    send: document.getElementById("send"),
+    stopBtn: document.getElementById("stop-btn"),
+    messages: document.getElementById("messages"),
+    modelSelect: document.getElementById("model-select"),
+    modelFamilySelect: document.getElementById("model-family-select"),
+    modelSizeSelect: document.getElementById("model-size-select"),
+    quantizationSelect: document.getElementById("quantization-select"),
+    modelDescription: document.getElementById("model-description"),
+    initLabel: document.getElementById("init-label"),
+    runtimeBadge: document.getElementById("runtime-badge"),
+    fileBtn: document.getElementById("file-btn"),
+    fileInput: document.getElementById("file-input"),
+    settingsBtn: document.getElementById("btn-settings"),
+    clearBtn: document.getElementById("btn-clear"),
+    settingsDialog: document.getElementById("settings"),
+    reloadModelBtn: document.getElementById("btn-reload-model"),
+    closeSettingsBtn: document.getElementById("btn-close-settings"),
+  };
+
+  // Check if all essential elements exist
+  const essentialElements = ['form', 'prompt', 'send', 'messages', 'settingsDialog'];
+  for (const elementName of essentialElements) {
+    if (!els[elementName]) {
+      console.error(`Essential element not found: ${elementName}`);
+      return false;
+    }
+  }
+
+  // Initialize current model
+  currentModel = els.modelSelect?.value || "";
+  
+  // Set up event listeners
+  setupEventListeners();
+  
+  // Initialize UI
+  updateChatInterface(false);
+  updateModelDescription();
+  
+  return true;
+}
+
+function setupEventListeners() {
+  // Form submission
+  els.form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = els.prompt.value.trim();
+    if (!text) return;
+    els.prompt.value = "";
+    handleSend(text);
+  });
+
+  // File upload
+  els.fileBtn?.addEventListener('click', () => {
+    els.fileInput?.click();
+  });
+
+  els.fileInput?.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      handleFileUpload(Array.from(e.target.files));
+    }
+  });
+
+  // Drag and drop
+  els.messages.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+
+  els.messages.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (e.dataTransfer.files.length > 0) {
+      handleFileUpload(Array.from(e.dataTransfer.files));
+    }
+  });
+
+  // Settings
+  els.settingsBtn?.addEventListener("click", () => els.settingsDialog.showModal());
+  els.closeSettingsBtn?.addEventListener("click", () => els.settingsDialog.close());
+
+  // Model management
+  els.reloadModelBtn?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    currentModel = els.modelSelect.value;
+    await reloadModel();
+  });
+
+  els.clearBtn?.addEventListener("click", () => {
+    messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
+    els.messages.innerHTML = "";
+  });
+
+  // Stop button
+  els.stopBtn?.addEventListener("click", () => {
+    if (currentAbortController && isGenerating) {
+      currentAbortController.abort();
+      setGeneratingState(false);
+    }
+  });
+
+  // Model selection cascading
+  els.modelFamilySelect?.addEventListener('change', updateModelSizes);
+  els.modelSizeSelect?.addEventListener('change', updateQuantizations);
+  els.quantizationSelect?.addEventListener('change', () => {
+    updateModelDescription();
+    updateFinalModelSelection();
+  });
+
+  // Model selection changes
+  els.modelSelect?.addEventListener('change', updateModelDescription);
+
+  // Settings dialog close
+  els.settingsDialog?.addEventListener('close', async () => {
+    const selectedModel = els.modelSelect.value;
+    if (selectedModel && selectedModel !== currentModel) {
+      currentModel = selectedModel;
+      await init();
+    } else if (!selectedModel) {
+      currentModel = "";
+      addMsg("assistant", "Please select a model from the Settings menu to get started.");
+      updateChatInterface(false);
+    }
+  });
+}
+
+// Debugging utility to clear Service Worker and caches
+window.clearAppCache = async function() {
   try {
-    init();
+    console.log('🧹 Clearing Service Worker and caches...');
+    
+    // Unregister all service workers
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+        console.log('✅ Unregistered Service Worker:', registration.scope);
+      }
+    }
+    
+    // Clear all caches
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      for (const cacheName of cacheNames) {
+        await caches.delete(cacheName);
+        console.log('✅ Deleted cache:', cacheName);
+      }
+    }
+    
+    // Clear localStorage and sessionStorage
+    localStorage.clear();
+    sessionStorage.clear();
+    console.log('✅ Cleared local storage');
+    
+    console.log('🎉 Cache clearing complete! Reloading page...');
+    setTimeout(() => location.reload(true), 1000);
   } catch (error) {
-    console.error("Error initializing application:", error);
+    console.error('❌ Error clearing cache:', error);
+  }
+};
+
+// Initialize the application when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    console.log('🚀 Initializing WebSLM application...');
+    
+    // Add debugging info to console
+    console.log('📋 Debug info:');
+    console.log('- To clear all caches and SW: clearAppCache()');
+    console.log('- Service Worker active:', 'serviceWorker' in navigator);
+    console.log('- Current origin:', location.origin);
+    
+    if (initializeApp()) {
+      console.log('✅ App initialized successfully');
+      // Show settings dialog on start
+      setTimeout(() => {
+        els.settingsDialog?.showModal();
+        console.log('⚙️ Settings dialog opened');
+      }, 100);
+    } else {
+      console.error('❌ App initialization failed - check element IDs');
+    }
+  } catch (error) {
+    console.error("❌ Error initializing application:", error);
+    // Show user-friendly error
+    document.body.innerHTML = `
+      <div style="padding: 20px; text-align: center; font-family: system-ui;">
+        <h2>🚨 Initialization Error</h2>
+        <p>The app failed to initialize. This might be due to cached files.</p>
+        <button onclick="clearAppCache()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
+          🧹 Clear Cache & Reload
+        </button>
+        <details style="margin-top: 20px; text-align: left;">
+          <summary>Technical Details</summary>
+          <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${error.stack}</pre>
+        </details>
+      </div>
+    `;
   }
 });
 
@@ -1027,63 +1215,10 @@ currentAbortController = null;
 }
 
 
-// Handle form submission
-els.form.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const text = els.prompt.value.trim();
-  if (!text) return;
-  els.prompt.value = "";
-  handleSend(text);
-});
-
-// Handle file upload
-els.fileBtn.addEventListener('click', () => {
-  els.fileInput.click();
-});
-
-els.fileInput.addEventListener('change', (e) => {
-  if (e.target.files.length > 0) {
-    handleFileUpload(Array.from(e.target.files));
-  }
-});
-
-// Handle drag and drop
-els.messages.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'copy';
-});
-
-els.messages.addEventListener('drop', (e) => {
-  e.preventDefault();
-  if (e.dataTransfer.files.length > 0) {
-    handleFileUpload(Array.from(e.dataTransfer.files));
-  }
-});
-
-els.settingsBtn.addEventListener("click", () => els.settingsDlg.showModal());
-els.closeSettingsBtn?.addEventListener("click", () => els.settingsDlg.close());
-
-els.reloadModelBtn.addEventListener("click", async (e) => {
-  e.preventDefault();
-  currentModel = els.modelSelect.value;
-  await reloadModel();
-});
-
-els.clearBtn.addEventListener("click", () => {
-  messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
-  els.messages.innerHTML = "";
-});
-
-// Stop button event listener
-els.stopBtn.addEventListener("click", () => {
-  if (currentAbortController && isGenerating) {
-    currentAbortController.abort();
-    setGeneratingState(false);
-  }
-});
-
 // Enable/disable chat interface based on model selection
 function updateChatInterface(enabled) {
+  if (!els.prompt || !els.send || !els.fileBtn) return;
+  
   els.prompt.disabled = !enabled;
   els.send.disabled = !enabled;
   els.fileBtn.disabled = !enabled;
@@ -1093,49 +1228,11 @@ function updateChatInterface(enabled) {
     els.prompt.placeholder = "Ask anything (runs locally)...";
   }
   // The reload button only applies to WebGPU (WebLLM) path
-  const reloadDisabled = runtime !== "webgpu";
-  els.reloadModelBtn.disabled = reloadDisabled;
-  els.reloadModelBtn.title = reloadDisabled ? "Reload available only for WebLLM (WebGPU) runtime" : "Reload the current WebLLM model";
-}
-
-// Initially disable chat interface
-updateChatInterface(false);
-
-// Initialize model description
-updateModelDescription();
-
-// Add event listeners for cascading model selection
-els.modelFamilySelect.addEventListener('change', updateModelSizes);
-els.modelSizeSelect.addEventListener('change', updateQuantizations);
-els.quantizationSelect.addEventListener('change', () => {
-  updateModelDescription();
-  updateFinalModelSelection();
-});
-
-// Add event listener for model selection changes
-els.modelSelect.addEventListener('change', updateModelDescription);
-
-// Initialize after model is selected
-els.settingsDlg.addEventListener('close', async () => {
-  const selectedModel = els.modelSelect.value;
-  if (selectedModel && selectedModel !== currentModel) {
-    currentModel = selectedModel;
-    await init();
-  } else if (!selectedModel) {
-    currentModel = "";
-    addMsg("assistant", "Please select a model from the Settings menu to get started.");
-    updateChatInterface(false);
+  if (els.reloadModelBtn) {
+    const reloadDisabled = runtime !== "webgpu";
+    els.reloadModelBtn.disabled = reloadDisabled;
+    els.reloadModelBtn.title = reloadDisabled ? "Reload available only for WebLLM (WebGPU) runtime" : "Reload the current WebLLM model";
   }
-});
-
-// Show settings dialog on start (after all event listeners are set up)
-if (els.settingsDlg) {
-  // Use setTimeout to ensure the dialog shows after the page is fully loaded
-  window.addEventListener('load', () => {
-    els.settingsDlg.showModal();
-  });
-} else {
-  console.error('Settings dialog element not found');
 }
 
 
