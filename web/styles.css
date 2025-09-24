@@ -132,16 +132,26 @@ header {
   margin-top: 16px;
 }
 
-.input-row input {
+.input-row input,
+.input-row textarea {
   flex: 1;
   padding: 12px 16px;
   border: 2px solid #e0e7ff;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 12px;
+  font-size: 16px;
   transition: all 0.2s ease;
+  font-family: inherit;
 }
 
-.input-row input:focus {
+.input-row textarea {
+  resize: vertical;
+  min-height: 48px;
+  max-height: 200px;
+  line-height: 1.4;
+}
+
+.input-row input:focus,
+.input-row textarea:focus {
   outline: none;
   border-color: #4f46e5;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);

@@ -32,27 +32,22 @@ let uploadedFiles = [];
 let isGenerating = false;
 let currentAbortController = null;
 
-// --- UI helpers ---
 function addMsg(who, text) {
   const row = document.createElement("div");
   row.className = "msg " + (who === "assistant" ? "assistant" : "user");
   const whoEl = document.createElement("div");
   whoEl.className = "who";
-  whoEl.textContent = who;
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
+  // Display friendly names instead of internal role names
+  whoEl.textContent = who === "assistant" ? "AI Assistant" : "You";
+  const bubbleEl = document.createElement("div");
+  bubbleEl.className = "bubble";
+  bubbleEl.innerHTML = formatText(text);
   
-  // Format text with basic markdown support for assistant messages
-  if (who === "assistant") {
-    bubble.innerHTML = formatText(text);
-  } else {
-    bubble.textContent = text;
-  }
-  
-  row.append(whoEl, bubble);
-  els.messages.append(row);
+  row.appendChild(whoEl);
+  row.appendChild(bubbleEl);
+  els.messages.appendChild(row);
   els.messages.scrollTop = els.messages.scrollHeight;
-  return bubble;
+  return bubbleEl;
 }
 
 // Simpler text formatting that focuses on line breaks and basic formatting
@@ -495,7 +490,7 @@ async function init() {
           }
         }
 
-        setBadge("WebGPU (WebLLM) — initializing…");
+        setBadge("WebGPU — initializing…");
         els.initLabel.textContent = `Loading ${currentModel} (first run downloads weights)…`;
 
         const engineConfig = {
@@ -513,7 +508,7 @@ async function init() {
             engineConfig
           );
 
-          setBadge("WebGPU (WebLLM)");
+          setBadge("WebGPU");
           els.initLabel.textContent = `Model: ${currentModel.split('-')[0]}`;
           loadingMsg.textContent = `Model ${currentModel} loaded and ready!`;
           setTimeout(() => {
@@ -542,7 +537,7 @@ async function init() {
 
   // Fallback to WASM (wllama)
   runtime = "wasm";
-  setBadge("WASM (wllama) — initializing…", true);
+  setBadge("WASM — initializing…", true);
   els.initLabel.textContent = "Loading tiny GGUF (first run downloads)…";
 
   try {
@@ -553,7 +548,7 @@ async function init() {
     const { startWasmFallback } = await import("./fallback/wllama.js");
     engine = await startWasmFallback({ WasmFromCDN: assets });
 
-    setBadge("WASM (wllama)");
+    setBadge("WASM");
     els.initLabel.textContent = "Ready (fallback).";
     // Enable chat interface for WASM fallback as well
     updateChatInterface(true);
@@ -777,8 +772,24 @@ els.form.addEventListener("submit", (e) => {
   e.preventDefault();
   const text = els.prompt.value.trim();
   if (!text) return;
-  els.prompt.value = "";
-  handleSend(text);
+  handleSend();
+});
+
+// Handle Shift+Enter for multi-line input
+els.prompt.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    const text = els.prompt.value.trim();
+    if (text) {
+      handleSend();
+    }
+  }
+});
+
+// Auto-resize textarea
+els.prompt.addEventListener("input", () => {
+  els.prompt.style.height = "auto";
+  els.prompt.style.height = Math.min(els.prompt.scrollHeight, 200) + "px";
 });
 
 // Handle file upload
@@ -837,10 +848,10 @@ function updateChatInterface(enabled) {
   } else {
     els.prompt.placeholder = "Ask anything (runs locally)...";
   }
-  // The reload button only applies to WebGPU (WebLLM) path
+  // The reload button only applies to WebGPU path
   const reloadDisabled = runtime !== "webgpu";
   els.reloadModelBtn.disabled = reloadDisabled;
-  els.reloadModelBtn.title = reloadDisabled ? "Reload available only for WebLLM (WebGPU) runtime" : "Reload the current WebLLM model";
+  els.reloadModelBtn.title = reloadDisabled ? "Reload available only for (WebGPU) runtime" : "Reload the current WebLLM model";
 }
 
 // Initially disable chat interface
