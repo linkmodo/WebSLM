@@ -600,8 +600,16 @@ function truncateToTokenLimit(text, maxTokens) {
 }
 
 // --- Chat send ---
-async function handleSend(prompt) {
+async function handleSend() {
   if (!engine) return;
+  
+  // Get the prompt from the input field
+  const prompt = els.prompt.value.trim();
+  if (!prompt) return;
+  
+  // Clear the input field immediately after getting the value
+  els.prompt.value = "";
+  els.prompt.style.height = "auto"; // Reset textarea height
   
   // Prepare the message with file content if any
   let fullPrompt = prompt;
