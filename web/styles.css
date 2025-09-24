@@ -590,3 +590,23 @@ dialog::backdrop {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
+
+/* Footer: center and make text/link white */
+.footer {
+  margin-top: 24px;
+  text-align: center;
+  color: #ffffff;
+}
+
+.footer .footer-content {
+  display: block;
+}
+
+.footer a {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.footer a:hover {
+  opacity: 0.9;
+}
