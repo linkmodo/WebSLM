@@ -96,6 +96,30 @@ const modelData = {
         quantizations: {
           "q4f16_1": { id: "Qwen2.5-3B-Instruct-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "Medium" }
         }
+      },
+      "1.5B-Coder": {
+        name: "2.5 Coder 1.5B (Programming)",
+        description: "Specialized for coding tasks with excellent programming capabilities",
+        vram: "~1.6GB",
+        quantizations: {
+          "q4f16_1": { id: "Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "Low" }
+        }
+      },
+      "3B-Coder": {
+        name: "2.5 Coder 3B (Advanced Programming)",
+        description: "Advanced coding model with strong programming and debugging skills",
+        vram: "~2.5GB",
+        quantizations: {
+          "q4f16_1": { id: "Qwen2.5-Coder-3B-Instruct-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "Medium" }
+        }
+      },
+      "1.5B-Math": {
+        name: "2.5 Math 1.5B (Mathematics)",
+        description: "Specialized for mathematical reasoning and problem solving",
+        vram: "~1.6GB",
+        quantizations: {
+          "q4f16_1": { id: "Qwen2.5-Math-1.5B-Instruct-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "Low" }
+        }
       }
     }
   },
@@ -173,6 +197,28 @@ const modelData = {
         vram: "~1.5GB",
         quantizations: {
           "q4f16_1": { id: "stablelm-2-zephyr-1_6b-q4f16_1-MLC-1k", quality: "85%", speed: "Fast", memory: "Low" }
+        }
+      }
+    }
+  },
+  deepseek: {
+    name: "DeepSeek",
+    description: "DeepSeek's advanced reasoning models with R1 distillation",
+    sizes: {
+      "7B-Qwen": {
+        name: "R1 Distill Qwen 7B (Reasoning)",
+        description: "Latest DeepSeek reasoning model with advanced capabilities",
+        vram: "~5.1GB",
+        quantizations: {
+          "q4f16_1": { id: "DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "High" }
+        }
+      },
+      "8B-Llama": {
+        name: "R1 Distill Llama 8B (Reasoning)",
+        description: "DeepSeek's reasoning model based on Llama architecture",
+        vram: "~5GB",
+        quantizations: {
+          "q4f16_1": { id: "DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC", quality: "85%", speed: "Fast", memory: "High" }
         }
       }
     }
