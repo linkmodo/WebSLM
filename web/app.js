@@ -1,10 +1,10 @@
 // app.js — WebLLM primary runtime with WebGPU, WASM fallback via wllama
 
 // CDN ESM endpoints (pin versions for stability)
-const WEBLLM_URL = "https://unpkg.com/@mlc-ai/web-llm@0.2.79?module";
+const WEBLLM_URL = "https://unpkg.com/@mlc-ai/web-llm@0.2.80?module";
 const WLLAMA_URL = "https://unpkg.com/@wllama/wllama@2.3.5/esm/wasm-from-cdn.js?module";
 
-
+// DOM Elements
 const els = {
   messages: document.getElementById("messages"),
   prompt: document.getElementById("prompt"),
@@ -22,15 +22,49 @@ const els = {
   modelSelect: document.getElementById("model-select"),
   reloadModelBtn: document.getElementById("btn-reload-model"),
   clearBtn: document.getElementById("btn-clear"),
+  themeBtn: document.getElementById("btn-theme"),
+  tempSlider: document.getElementById("temperature"),
+  tempValue: document.getElementById("temp-value"),
 };
+
+// Theme Management
+function initTheme() {
+  const savedTheme = localStorage.getItem("webslm-theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const theme = savedTheme || (prefersDark ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme");
+  const next = current === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("webslm-theme", next);
+}
+
+// Initialize theme on load
+initTheme();
+
+// Theme button event listener
+if (els.themeBtn) {
+  els.themeBtn.addEventListener("click", toggleTheme);
+}
+
+// Temperature slider update
+if (els.tempSlider && els.tempValue) {
+  els.tempSlider.addEventListener("input", () => {
+    els.tempValue.textContent = els.tempSlider.value;
+  });
+}
 
 let engine = null;
 let runtime = "detecting"; // "webgpu" | "wasm"
-let messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
+let messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser. You are part of Crazy Bananas Web SLM." }];
 let currentModel = els.modelSelect.value || "";
 let uploadedFiles = [];
 let isGenerating = false;
 let currentAbortController = null;
+let isInitialLoad = true; // Track if this is the first time loading (no model selected yet)
 
 function addMsg(who, text) {
   const row = document.createElement("div");
@@ -164,9 +198,15 @@ function setGeneratingState(generating) {
 }
 function setBadge(txt, ok = true) {
   els.runtimeBadge.textContent = txt;
-  els.runtimeBadge.style.background = ok ? "#dcfce7" : "#fee2e2";
-  els.runtimeBadge.style.border = "1px solid " + (ok ? "#bbf7d0" : "#fecaca");
-  els.runtimeBadge.style.color = ok ? "#14532d" : "#7f1d1d";
+  if (ok) {
+    els.runtimeBadge.style.background = "rgba(16, 185, 129, 0.1)";
+    els.runtimeBadge.style.border = "1px solid rgba(16, 185, 129, 0.3)";
+    els.runtimeBadge.style.color = "#10b981";
+  } else {
+    els.runtimeBadge.style.background = "rgba(239, 68, 68, 0.1)";
+    els.runtimeBadge.style.border = "1px solid rgba(239, 68, 68, 0.3)";
+    els.runtimeBadge.style.color = "#ef4444";
+  }
 }
 
 // --- File handling functions ---
@@ -829,13 +869,46 @@ els.closeSettingsBtn?.addEventListener("click", () => els.settingsDlg.close());
 
 els.reloadModelBtn.addEventListener("click", async (e) => {
   e.preventDefault();
-  currentModel = els.modelSelect.value;
-  await reloadModel();
+  const selectedModel = els.modelSelect.value;
+  
+  if (!selectedModel) {
+    alert("Please select a model first.");
+    return;
+  }
+  
+  currentModel = selectedModel;
+  
+  // Mark initial load as complete and remove the class
+  isInitialLoad = false;
+  els.settingsDlg?.classList.remove('initial-load');
+  
+  // Close the dialog
+  els.settingsDlg?.close();
+  
+  // Initialize the model
+  await init();
 });
 
 els.clearBtn.addEventListener("click", () => {
-  messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser." }];
+  messages = [{ role: "system", content: "You are a concise, helpful assistant that runs 100% locally in the user's browser. You are part of Crazy Bananas Web SLM." }];
   els.messages.innerHTML = "";
+  // Show welcome message again
+  els.messages.innerHTML = `
+    <div class="welcome-message">
+      <div class="welcome-icon">🍌</div>
+      <h2>Chat Cleared - Ready for New Questions</h2>
+      <p>Fix grammar, get coding help, or ask questions. All processing happens locally in your browser.</p>
+      <div class="features">
+        <div class="feature"><span class="feature-icon">✏️</span> Grammar & Writing</div>
+        <div class="feature"><span class="feature-icon">💻</span> Code Help</div>
+        <div class="feature"><span class="feature-icon">🔒</span> 100% Private</div>
+        <div class="feature"><span class="feature-icon">💰</span> Completely Free</div>
+      </div>
+    </div>
+  `;
+  // Clear uploaded files
+  uploadedFiles = [];
+  updateFilePreview();
 });
 
 // Stop button event listener
@@ -856,14 +929,19 @@ function updateChatInterface(enabled) {
   } else {
     els.prompt.placeholder = "Ask anything (runs locally)...";
   }
-  // The reload button only applies to WebGPU path
-  const reloadDisabled = runtime !== "webgpu";
-  els.reloadModelBtn.disabled = reloadDisabled;
-  els.reloadModelBtn.title = reloadDisabled ? "Reload available only for (WebGPU) runtime" : "Reload the current WebLLM model";
+  // Only disable reload button after a model has been loaded and we know the runtime
+  // Keep it enabled during initial load so user can select and load a model
+  if (!isInitialLoad) {
+    const reloadDisabled = runtime !== "webgpu";
+    els.reloadModelBtn.disabled = reloadDisabled;
+    els.reloadModelBtn.title = reloadDisabled ? "Reload available only for (WebGPU) runtime" : "Reload the current WebLLM model";
+  }
 }
 
-// Initially disable chat interface
+// Initially disable chat interface but keep Load Model button enabled
 updateChatInterface(false);
+// Ensure Load Model button is always enabled on initial load
+els.reloadModelBtn.disabled = false;
 
 // Update model description when selection changes
 function updateModelDescription() {
@@ -892,16 +970,40 @@ els.settingsDlg.addEventListener('close', async () => {
 });
 
 // Show settings dialog on start (after all event listeners are set up)
-if (els.settingsDlg) {
-  // Use setTimeout to ensure the dialog shows after the page is fully loaded
-  window.addEventListener('load', () => {
-    els.settingsDlg.showModal();
-  });
+function showSettingsOnLoad() {
+  if (els.settingsDlg && typeof els.settingsDlg.showModal === 'function') {
+    try {
+      // Add initial-load class to hide close button
+      if (isInitialLoad) {
+        els.settingsDlg.classList.add('initial-load');
+      }
+      els.settingsDlg.showModal();
+    } catch (e) {
+      console.error('Error showing settings dialog:', e);
+    }
+  } else {
+    console.error('Settings dialog element not found or showModal not supported');
+  }
+}
+
+// Prevent closing dialog on initial load (must select a model)
+els.settingsDlg?.addEventListener('cancel', (e) => {
+  if (isInitialLoad && !currentModel) {
+    e.preventDefault();
+  }
+});
+
+// Try multiple approaches to ensure dialog shows
+if (document.readyState === 'complete') {
+  setTimeout(showSettingsOnLoad, 100);
 } else {
-  console.error('Settings dialog element not found');
+  window.addEventListener('load', () => {
+    setTimeout(showSettingsOnLoad, 100);
+  });
 }
 
 
+// Models that support function calling (from WebLLM config.ts)
 const FUNCTION_CALLING_MODELS = [
   "Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC",
   "Hermes-2-Pro-Llama-3-8B-q4f32_1-MLC",
@@ -910,12 +1012,6 @@ const FUNCTION_CALLING_MODELS = [
   "Hermes-3-Llama-3.1-8B-q4f16_1-MLC",
   "Hermes-3-Llama-3.2-3B-q4f16_1-MLC",
   "Hermes-3-Llama-3.2-3B-q4f32_1-MLC",
-  "Llama-3.1-8B-Instruct-q4f16_1-MLC",
-  "Llama-3.1-8B-Instruct-q4f16_1-MLC-1k",
-  "Llama-3.1-8B-Instruct-q4f32_1-MLC",
-  "Llama-3.1-8B-Instruct-q4f32_1-MLC-1k",
-  "Llama-3.2-3B-Instruct-q4f16_1-MLC",
-  "Llama-3.2-3B-Instruct-q4f32_1-MLC"
 ];
 
 async function runToolDemo() {

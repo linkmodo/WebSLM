@@ -1,0 +1,11 @@
+# Robots.txt for Crazy Bananas SLM
+# https://crazybananas-slm.netlify.app/
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://crazybananas-slm.netlify.app/sitemap.xml
+
+# Crawl-delay for politeness
+Crawl-delay: 1

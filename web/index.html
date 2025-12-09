@@ -3,26 +3,99 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Crazy Bananas SLM GPT</title>
+  
+  <!-- Primary SEO Meta Tags -->
+  <title>Crazy Bananas SLM - Free AI Grammar Checker & Coding Assistant | No Sign-up Required</title>
+  <meta name="title" content="Crazy Bananas SLM - Free AI Grammar Checker & Coding Assistant | No Sign-up Required">
+  <meta name="description" content="Free AI assistant for grammar checking, code help, and Q&A. Runs 100% in your browser - no account, no API fees, completely private. Alternative to ChatGPT for simple tasks.">
+  <meta name="keywords" content="free AI, grammar checker, coding assistant, free ChatGPT alternative, browser AI, WebGPU, small language model, SLM, private AI, no signup AI, free writing assistant, code helper, AI without account, local AI, offline AI">
+  <meta name="author" content="Li Fan">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://crazybananas-slm.netlify.app/">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://crazybananas-slm.netlify.app/">
+  <meta property="og:title" content="Crazy Bananas SLM - Free AI Grammar Checker & Coding Assistant">
+  <meta property="og:description" content="Free AI for grammar, coding help & questions. No sign-up, no fees, 100% private. Runs entirely in your browser with WebGPU.">
+  <meta property="og:image" content="https://crazybananas-slm.netlify.app/public/og-image.png">
+  <meta property="og:site_name" content="Crazy Bananas SLM">
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://crazybananas-slm.netlify.app/">
+  <meta name="twitter:title" content="Crazy Bananas SLM - Free AI Grammar Checker & Coding Assistant">
+  <meta name="twitter:description" content="Free AI for grammar, coding help & questions. No sign-up, no fees, 100% private. Runs entirely in your browser.">
+  <meta name="twitter:image" content="https://crazybananas-slm.netlify.app/public/og-image.png">
+  
+  <!-- Additional SEO -->
+  <meta name="application-name" content="Crazy Bananas SLM">
+  <meta name="apple-mobile-web-app-title" content="Crazy Bananas SLM">
+  <meta name="classification" content="AI Tools, Writing Assistant, Code Helper">
+  <meta name="category" content="Technology">
+  
+  <!-- Existing links -->
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./public/logo.png">
   <link rel="apple-touch-icon" href="./public/logo.png">
   <meta name="theme-color" content="#0f172a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
+  
+  <!-- Structured Data for Search Engines -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Crazy Bananas SLM",
+    "description": "Free AI assistant for grammar checking, coding help, and general questions. Runs 100% in your browser with no sign-up required.",
+    "url": "https://crazybananas-slm.netlify.app/",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Any (Web Browser)",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "Grammar checking and correction",
+      "Code assistance and debugging",
+      "Question answering",
+      "100% browser-based - no server",
+      "No account required",
+      "Completely private - data stays local",
+      "WebGPU accelerated"
+    ],
+    "author": {
+      "@type": "Person",
+      "name": "Li Fan"
+    },
+    "browserRequirements": "Requires WebGPU support (Chrome 113+, Edge 113+)"
+  }
+  </script>
 </head>
 <body>
   <div class="app">
     <header>
       <div class="title">
-        <img src="./public/logo.png" alt="Crazy Bananas SLM GPT" style="height: 150px; width: auto;">
         <div class="title-text">
-          <h1>Crazy Bananas SLM GPT</h1>
-          <p class="subtitle">Small Language Model GPTs that run entirely on your desktop browser.</p>
+          <h1>Crazy Bananas SLM</h1>
+          <p class="subtitle">Web Small Language Model • AI in your browser • 100% Private</p>
         </div>
       </div>
       <div class="actions">
-        <button id="btn-settings" title="Settings">⚙</button>
-        <button id="btn-clear" title="Clear chat">🧹</button>
+        <button id="btn-theme" class="icon-btn" title="Toggle theme" aria-label="Toggle dark/light theme">
+          <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <button id="btn-settings" class="icon-btn" title="Settings" aria-label="Open settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button id="btn-clear" class="icon-btn" title="Clear chat" aria-label="Clear chat history">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
       </div>
     </header>
 
@@ -32,71 +105,147 @@
     </section>
 
     <main class="chat">
-      <div id="messages" class="messages"></div>
-      <form id="chat-form" class="input-row">
-        <textarea id="prompt" placeholder="Ask anything (runs locally)... (Shift+Enter for new line)" autocomplete="off" rows="1"></textarea>
-        <input id="file-input" type="file" accept=".txt,.md,.json,.csv,.xml,.html,.js,.py,.cpp,.c,.java,.ts,.jsx,.tsx,.vue,.php,.rb,.go,.rs,.sh,.yml,.yaml,.toml,.ini,.cfg,.log,.pdf,.docx,.doc,.rtf,.odt,.png,.jpg,.jpeg,.gif,.bmp,.webp,.svg" multiple style="display: none;" />
-        <button id="file-btn" type="button" title="Upload files">📎</button>
-        <button id="send" type="submit">Send ▸</button>
-        <button id="stop-btn" type="button" title="Stop generation" style="display: none; background: #ef4444; color: white;">⏹ Stop</button>
-      </form>
+      <div id="messages" class="messages">
+        <div class="welcome-message">
+          <div class="welcome-icon">🍌</div>
+          <h2>Free AI Assistant - No Sign-up Required</h2>
+          <p>Fix grammar, get coding help, or ask questions. Click <strong>Settings</strong> to select a model and start chatting!</p>
+          <div class="features">
+            <div class="feature"><span class="feature-icon">✏️</span> Grammar & Writing</div>
+            <div class="feature"><span class="feature-icon">💻</span> Code Help</div>
+            <div class="feature"><span class="feature-icon">🔒</span> 100% Private</div>
+            <div class="feature"><span class="feature-icon">�</span> Completely Free</div>
+          </div>
+        </div>
+      </div>
       <div id="file-preview" class="file-preview" style="display: none;"></div>
+      <form id="chat-form" class="input-row">
+        <div class="input-container">
+          <textarea id="prompt" placeholder="Message WebSLM... (Shift+Enter for new line)" autocomplete="off" rows="1" disabled></textarea>
+          <div class="input-actions">
+            <input id="file-input" type="file" accept=".txt,.md,.json,.csv,.xml,.html,.js,.py,.cpp,.c,.java,.ts,.jsx,.tsx,.vue,.php,.rb,.go,.rs,.sh,.yml,.yaml,.toml,.ini,.cfg,.log,.pdf,.docx,.doc,.rtf,.odt,.png,.jpg,.jpeg,.gif,.bmp,.webp,.svg" multiple style="display: none;" />
+            <button id="file-btn" type="button" class="input-icon-btn" title="Upload files" aria-label="Upload files" disabled>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+          </div>
+        </div>
+        <button id="send" type="submit" class="send-btn" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+        <button id="stop-btn" type="button" class="stop-btn" title="Stop generation" style="display: none;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          Stop
+        </button>
+      </form>
     </main>
 
     <dialog id="settings">
-      <form method="dialog" class="settings">
+      <div class="dialog-header">
         <h3>Settings</h3>
-        <label title="Select the AI model to use. Larger models are more capable but require more resources.">Model (WebLLM)
+        <button id="btn-close-settings" type="button" class="dialog-close" aria-label="Close settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form method="dialog" class="settings-form">
+        <div class="setting-group">
+          <label for="model-select">AI Model</label>
+          <p class="setting-hint">Larger models are more capable but require more VRAM</p>
           <select id="model-select">
             <option value="" data-desc="Please select a model to get started. Models will be downloaded on first use.">-- Select a Model --</option>
-            <!-- Ultra Small Models (< 1B) -->
-            <option value="SmolLM2-135M-Instruct-q0f16-MLC" data-desc="SmolLM2 135M (135M parameters) - Ultra-fast tiny model for basic tasks and low-resource devices. Minimal VRAM usage (~360MB).">SmolLM2 135M (Ultra Fast)</option>
-            <option value="SmolLM2-360M-Instruct-q4f16_1-MLC" data-desc="SmolLM2 360M (360M parameters) - Very fast small model for simple Q&A and basic tasks. Low VRAM usage (~376MB).">SmolLM2 360M (Very Fast)</option>
-            <!-- Small Models (1-2B) -->
-            <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC" data-desc="Llama 3.2 1B (1B parameters) - Meta's latest ultra-compact model with excellent efficiency. Good for basic tasks (~879MB VRAM).">Llama 3.2 1B (Efficient)</option>
-            <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 0.5B (0.5B parameters) - Alibaba's tiny but capable model. Excellent for quick responses (~945MB VRAM).">Qwen2.5 0.5B (Quick)</option>
-            <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 1.5B (1.5B parameters) - Balanced small model with good performance for its size (~1.6GB VRAM).">Qwen2.5 1.5B (Balanced)</option>
-            <option value="SmolLM2-1.7B-Instruct-q4f16_1-MLC" data-desc="SmolLM2 1.7B (1.7B parameters) - HuggingFace's efficient small model with good reasoning capabilities (~1.8GB VRAM).">SmolLM2 1.7B (Reasoning)</option>
-            <option value="stablelm-2-zephyr-1_6b-q4f16_1-MLC-1k" data-desc="StableLM Zephyr 1.6B (1.6B parameters) - Stability AI's chat-optimized model with 1K context (~1.5GB VRAM).">StableLM Zephyr 1.6B</option>
-            <!-- Medium Models (2-4B) -->
-            <option value="gemma-2-2b-it-q4f16_1-MLC-1k" data-desc="Gemma 2 2B (2B parameters) - Google's latest efficient model with strong performance (~1.6GB VRAM, 1K context).">Gemma 2 2B (Google)</option>
-            <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 3B (3B parameters) - Alibaba's mid-size model with excellent capabilities (~2.5GB VRAM).">Qwen2.5 3B (Capable)</option>
-            <option value="Phi-3.5-mini-instruct-q4f16_1-MLC-1k" data-desc="Phi-3.5 Mini (3.8B parameters) - Microsoft's latest small model with excellent reasoning and coding capabilities (~2.5GB VRAM, 1K context).">Phi-3.5 Mini (Microsoft)</option>
-            <!-- Large Models (7-8B) -->
-            <option value="Mistral-7B-Instruct-v0.3-q4f16_1-MLC" data-desc="Mistral 7B v0.3 (7B parameters) - Strong performance in reasoning and instruction following. Good balance of capability and speed (~4.6GB VRAM).">Mistral 7B v0.3 (Recommended)</option>
-            <option value="Llama-3.1-8B-Instruct-q4f16_1-MLC-1k" data-desc="Llama 3.1 8B (8B parameters) - Meta's powerful model with excellent instruction following (~4.6GB VRAM, 1K context).">Llama 3.1 8B (Most Capable)</option>
-            <option value="Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC" data-desc="Hermes 2 Pro (8B parameters) - Fine-tuned Llama 3 with function calling support. Excellent for complex tasks (~5GB VRAM).">Hermes 2 Pro (Function Calling)</option>
-            <option value="Hermes-3-Llama-3.1-8B-q4f16_1-MLC" data-desc="Hermes 3 (8B parameters) - Latest Hermes model with advanced capabilities and function calling (~4.9GB VRAM).">Hermes 3 (Advanced)</option>
-            <!-- Specialized Models -->
-            <option value="Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 Coder 1.5B (1.5B parameters) - Specialized for coding tasks with excellent programming capabilities (~1.6GB VRAM).">Qwen2.5 Coder 1.5B (Coding)</option>
-            <option value="Qwen2.5-Coder-3B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 Coder 3B (3B parameters) - Advanced coding model with strong programming and debugging skills (~2.5GB VRAM).">Qwen2.5 Coder 3B (Advanced Coding)</option>
-            <option value="Qwen2.5-Math-1.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 Math 1.5B (1.5B parameters) - Specialized for mathematical reasoning and problem solving (~1.6GB VRAM).">Qwen2.5 Math 1.5B (Mathematics)</option>
-            <!-- DeepSeek Models -->
-            <option value="DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC" data-desc="DeepSeek R1 Distill Qwen 7B (7B parameters) - Latest DeepSeek reasoning model with advanced capabilities (~5.1GB VRAM).">DeepSeek R1 Qwen 7B (Reasoning)</option>
-            <option value="DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC" data-desc="DeepSeek R1 Distill Llama 8B (8B parameters) - DeepSeek's reasoning model based on Llama architecture (~5GB VRAM).">DeepSeek R1 Llama 8B (Reasoning)</option>
+            
+            <optgroup label="🚀 Ultra Fast (< 1GB VRAM)">
+              <option value="SmolLM2-135M-Instruct-q0f16-MLC" data-desc="SmolLM2 135M - Ultra-fast tiny model for basic tasks. ~360MB VRAM.">SmolLM2 135M</option>
+              <option value="SmolLM2-360M-Instruct-q4f16_1-MLC" data-desc="SmolLM2 360M - Very fast for simple Q&A. ~376MB VRAM.">SmolLM2 360M</option>
+              <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 0.5B - Alibaba's tiny but capable model. ~945MB VRAM.">Qwen2.5 0.5B</option>
+              <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC" data-desc="Llama 3.2 1B - Meta's ultra-compact model. ~879MB VRAM.">Llama 3.2 1B</option>
+            </optgroup>
+            
+            <optgroup label="⚡ Fast (1-2GB VRAM)">
+              <option value="Qwen3-0.6B-q4f16_1-MLC" data-desc="Qwen3 0.6B - Latest Qwen with thinking capabilities. ~1.4GB VRAM.">Qwen3 0.6B ✨ NEW</option>
+              <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 1.5B - Balanced small model. ~1.6GB VRAM.">Qwen2.5 1.5B</option>
+              <option value="Qwen3-1.7B-q4f16_1-MLC" data-desc="Qwen3 1.7B - Advanced reasoning with thinking mode. ~2GB VRAM.">Qwen3 1.7B ✨ NEW</option>
+              <option value="SmolLM2-1.7B-Instruct-q4f16_1-MLC" data-desc="SmolLM2 1.7B - HuggingFace's efficient model. ~1.8GB VRAM.">SmolLM2 1.7B</option>
+              <option value="stablelm-2-zephyr-1_6b-q4f16_1-MLC-1k" data-desc="StableLM Zephyr 1.6B - Chat-optimized. ~1.5GB VRAM.">StableLM Zephyr 1.6B</option>
+              <option value="gemma-2-2b-it-q4f16_1-MLC-1k" data-desc="Gemma 2 2B - Google's efficient model. ~1.6GB VRAM.">Gemma 2 2B (Google)</option>
+            </optgroup>
+            
+            <optgroup label="🎯 Balanced (2-4GB VRAM)">
+              <option value="Llama-3.2-3B-Instruct-q4f16_1-MLC" data-desc="Llama 3.2 3B - Meta's capable compact model. ~2.3GB VRAM.">Llama 3.2 3B</option>
+              <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 3B - Excellent mid-size model. ~2.5GB VRAM.">Qwen2.5 3B</option>
+              <option value="Qwen3-4B-q4f16_1-MLC" data-desc="Qwen3 4B - Strong reasoning with thinking mode. ~3.4GB VRAM.">Qwen3 4B ✨ NEW</option>
+              <option value="Hermes-3-Llama-3.2-3B-q4f16_1-MLC" data-desc="Hermes 3 3B - Function calling support. ~2.3GB VRAM.">Hermes 3 3B (Tools)</option>
+              <option value="Phi-3.5-mini-instruct-q4f16_1-MLC-1k" data-desc="Phi-3.5 Mini - Microsoft's reasoning model. ~2.5GB VRAM.">Phi-3.5 Mini (Microsoft)</option>
+            </optgroup>
+            
+            <optgroup label="💪 Powerful (4-6GB VRAM)">
+              <option value="Mistral-7B-Instruct-v0.3-q4f16_1-MLC" data-desc="Mistral 7B v0.3 - Strong all-around performance. ~4.6GB VRAM.">Mistral 7B v0.3 ⭐</option>
+              <option value="Llama-3.1-8B-Instruct-q4f16_1-MLC-1k" data-desc="Llama 3.1 8B - Meta's powerful model. ~4.6GB VRAM.">Llama 3.1 8B ⭐</option>
+              <option value="Qwen2.5-7B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 7B - Alibaba's capable model. ~5.1GB VRAM.">Qwen2.5 7B</option>
+              <option value="Qwen3-8B-q4f16_1-MLC" data-desc="Qwen3 8B - Latest with advanced thinking. ~5.7GB VRAM.">Qwen3 8B ✨ NEW</option>
+              <option value="DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC" data-desc="DeepSeek R1 Qwen 7B - Advanced reasoning. ~5.1GB VRAM.">DeepSeek R1 Qwen 7B</option>
+              <option value="DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC" data-desc="DeepSeek R1 Llama 8B - Reasoning focused. ~5GB VRAM.">DeepSeek R1 Llama 8B</option>
+            </optgroup>
+            
+            <optgroup label="🛠️ Function Calling">
+              <option value="Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC" data-desc="Hermes 2 Pro 8B - Best for tool use. ~5GB VRAM.">Hermes 2 Pro 8B</option>
+              <option value="Hermes-3-Llama-3.1-8B-q4f16_1-MLC" data-desc="Hermes 3 8B - Advanced function calling. ~4.9GB VRAM.">Hermes 3 8B</option>
+              <option value="Hermes-2-Pro-Mistral-7B-q4f16_1-MLC" data-desc="Hermes 2 Pro Mistral - Tool use support. ~4GB VRAM.">Hermes 2 Pro Mistral 7B</option>
+            </optgroup>
+            
+            <optgroup label="💻 Coding Specialists">
+              <option value="Qwen2.5-Coder-0.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 Coder 0.5B - Fast coding assistant. ~945MB VRAM.">Qwen2.5 Coder 0.5B</option>
+              <option value="Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 Coder 1.5B - Good coding capabilities. ~1.6GB VRAM.">Qwen2.5 Coder 1.5B</option>
+              <option value="Qwen2.5-Coder-3B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 Coder 3B - Strong programming skills. ~2.5GB VRAM.">Qwen2.5 Coder 3B</option>
+              <option value="Qwen2.5-Coder-7B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 Coder 7B - Advanced coding model. ~5.1GB VRAM.">Qwen2.5 Coder 7B ⭐</option>
+            </optgroup>
+            
+            <optgroup label="🔢 Math Specialists">
+              <option value="Qwen2.5-Math-1.5B-Instruct-q4f16_1-MLC" data-desc="Qwen2.5 Math 1.5B - Mathematical reasoning. ~1.6GB VRAM.">Qwen2.5 Math 1.5B</option>
+              <option value="WizardMath-7B-V1.1-q4f16_1-MLC" data-desc="WizardMath 7B - Strong math problem solving. ~4.6GB VRAM.">WizardMath 7B</option>
+            </optgroup>
+            
+            <optgroup label="👁️ Vision Models">
+              <option value="Phi-3.5-vision-instruct-q4f16_1-MLC" data-desc="Phi-3.5 Vision - Analyze images and text. ~4GB VRAM.">Phi-3.5 Vision ✨ NEW</option>
+            </optgroup>
+            
+            <optgroup label="🌍 Multilingual">
+              <option value="gemma-2-2b-jpn-it-q4f16_1-MLC" data-desc="Gemma 2 2B Japanese - Optimized for Japanese. ~1.9GB VRAM.">Gemma 2 2B (Japanese)</option>
+            </optgroup>
+            
+            <optgroup label="🏆 High Performance (6GB+ VRAM)">
+              <option value="gemma-2-9b-it-q4f16_1-MLC" data-desc="Gemma 2 9B - Google's most capable model. ~6.4GB VRAM.">Gemma 2 9B (Google) ⭐</option>
+            </optgroup>
           </select>
           <div id="model-description" class="model-description">
             Select a model to see details
           </div>
-        </label>
-        <label title="Set a fixed random seed for reproducible outputs. Same seed + same input = same output. 0 means random.">
-          Seed 
-          <input id="seed" type="number" min="0" step="1" value="0" />
-        </label>
-        <label title="Controls randomness: 0 = deterministic, higher values = more creative/random">
-          Temperature 
-          <input id="temperature" type="number" min="0" max="2" step="0.1" value="0.7" />
-        </label>
-        <div class="row">
-          <button id="btn-reload-model" value="default" title="Apply settings and reload the AI model with current configuration">Reload model</button>
-          <button id="btn-close-settings">Close</button>
+        </div>
+        
+        <div class="settings-row">
+          <div class="setting-group half">
+            <label for="temperature">Temperature</label>
+            <p class="setting-hint">0 = focused, 2 = creative</p>
+            <input id="temperature" type="range" min="0" max="2" step="0.1" value="0.7" />
+            <span class="range-value" id="temp-value">0.7</span>
+          </div>
+          <div class="setting-group half">
+            <label for="seed">Seed</label>
+            <p class="setting-hint">0 = random</p>
+            <input id="seed" type="number" min="0" step="1" value="0" />
+          </div>
+        </div>
+        
+        <div class="settings-actions">
+          <button id="btn-reload-model" type="button" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Load Model
+          </button>
         </div>
       </form>
     </dialog>
+    
     <footer class="footer">
-      <div class="footer-content">
-        <p>Built by Li Fan <a href="https://github.com/linkmodo/WebSLM" target="_blank" rel="noopener noreferrer">Sourcecode</a></p>
-      </div>
+      <p>Built by Li Fan</p>
     </footer>
   </div>
 

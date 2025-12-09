@@ -1,10 +1,12 @@
 {
-  "name": "WebGPU LLM (WebLLM + WASM)",
-  "short_name": "Web LLM",
+  "name": "Crazy Bananas SLM - Free AI Grammar & Code Assistant",
+  "short_name": "Crazy Bananas",
+  "description": "Free AI assistant for grammar checking, coding help, and Q&A. Runs 100% in your browser - no account needed, completely private.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0b1220",
   "theme_color": "#0f172a",
+  "categories": ["utilities", "productivity", "education"],
   "icons": [
     {
       "src": "./public/icon-192.png",
